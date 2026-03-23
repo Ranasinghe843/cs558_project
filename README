@@ -1,7 +1,0 @@
-Use requirements file to setup a conda environment
-
-For generating dataset, run gen_dataset.py
-
-For viewing environment, run env.py
-
-For visualizing a example RRT* run, visualize_rrt.py
