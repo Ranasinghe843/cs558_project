@@ -23,18 +23,29 @@ class NeuralNetwork(nn.Module):
         return self.net(x)
     
 class MPCConfig:
-    def __init__(self, robot_id, obs_ids, terminal_model, norm_mean, norm_std, horizon_length=10, goal=[0.0, 0.0]):
+    def __init__(self, robot_id, obs_ids, terminal_model, norm_mean, norm_std, terminal_cost="nn", horizon_length=10, goal=[0.0, 0.0]):
         self.horizon_length = horizon_length
         self.goal = np.array(goal)
         self.robot_id = robot_id
+        self.robot_radius = 0.160/2.0
         self.dt = 0.1
         self.terminal_cost_model = terminal_model # Pass the TRAINED model here
         self.obs_ids = obs_ids
-        self.Q = 3.0
-        self.R = 0.1 
-        self.W = 50.0 # Increased obstacle weight for safety
         self.norm_mean = norm_mean
         self.norm_std = norm_std
+        # 1. Store the choice string
+        self.terminal_cost_type = terminal_cost 
+
+        # 2. Assign the FUNCTION REFERENCE (No parentheses here!)
+        if self.terminal_cost_type == "nn":
+            print("Using Neural Network for Terminal Cost")
+            self.cost_to_go = self.nn_cost_to_go
+        elif self.terminal_cost_type == "heuristic":
+            print("Using Heuristic for Terminal Cost")
+            self.cost_to_go = self.heuristic_cost_to_go
+            self.Q = np.array([2.0, 0.5]) 
+            self.R = np.array([0.2, 0.2]) # Control effort weights for [v, omega] 
+            self.W = 2.4 
 
     def get_robot_state(self):
         pos, ori = p.getBasePositionAndOrientation(self.robot_id)
@@ -52,7 +63,7 @@ class MPCConfig:
     
     def heuristic_cost_to_go(self, state):
         """Calculates distance from the predicted FUTURE state to goal"""
-        return 5.0 * np.linalg.norm(state[:2] - self.goal)
+        return ((state[:2] - self.goal)**2).sum()
     
     def nn_cost_to_go(self, state):
         """Uses the Neural Network on the predicted FUTURE state"""
@@ -64,32 +75,82 @@ class MPCConfig:
             prediction = self.terminal_cost_model(normalized_input)
         return prediction.item()
     
+    # def objective_function(self, u_flattened):
+    #     u = u_flattened.reshape(self.horizon_length, 2)
+    #     total_cost = 0
+    #     temp_state = self.state # Start prediction from actual current state
+        
+    #     for i in range(self.horizon_length):
+    #         v, omega = u[i]
+    #         # Accumulate prediction: x_next depends on x_current
+    #         temp_state = self.motion_model(temp_state, v, omega)
+            
+    #         # 1. Stage Cost: Distance to Goal
+    #         total_cost += self.Q * np.linalg.norm(temp_state[:2] - self.goal)**2
+            
+    #         # 2. Stage Cost: Obstacle Avoidance
+    #         for obs_id in self.obs_ids:
+    #             obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
+    #             dist = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2]))
+    #             total_cost += self.W * (1.0 / (dist + 1e-3))
+            
+    #         # 3. Stage Cost: Smoothness
+    #         total_cost += (self.R[0] * v**2)+ (self.R[0] * omega**2)
+            
+    #     # 4. Terminal Cost: Apply ONLY to the final predicted state (temp_state after loop)
+    #     terminal_cost = self.cost_to_go(temp_state)
+    #     total_cost += terminal_cost
+
+    #     # print(f"stage cost: {total_cost:.4f} | terminal cost: {terminal_cost:.4f}")
+        
+    #     return total_cost
+
     def objective_function(self, u_flattened):
         u = u_flattened.reshape(self.horizon_length, 2)
         total_cost = 0
-        temp_state = self.state # Start prediction from actual current state
+        temp_state = self.state 
+        
+        # Suggestion: Add this weight to your __init__
+        # Q_yaw = 1.0  
         
         for i in range(self.horizon_length):
             v, omega = u[i]
-            # Accumulate prediction: x_next depends on x_current
             temp_state = self.motion_model(temp_state, v, omega)
             
-            # 1. Stage Cost: Distance to Goal
-            total_cost += self.Q * np.linalg.norm(temp_state[:2] - self.goal)**2
+            # Current Position and Heading
+            x, y, theta = temp_state
             
+            # 1. Stage Cost: Distance to Goal
+            dist_to_goal = np.linalg.norm(temp_state[:2] - self.goal)
+            total_cost += self.Q[0] * dist_to_goal**2
+            
+            # --- NEW: HEADING ERROR COST ---
+            # Calculate angle to goal from current position
+            if dist_to_goal > 0.1:
+                dx = self.goal[0] - x
+                dy = self.goal[1] - y
+                desired_yaw = np.arctan2(dy, dx)
+                
+                # Shortest angular distance (Normalizes to -pi to pi)
+                yaw_error = desired_yaw - theta
+                yaw_error = np.arctan2(np.sin(yaw_error), np.cos(yaw_error))
+            
+            # Add heading cost (Only if we aren't already at the goal)
+                total_cost += self.Q[1] * yaw_error**2 # Weight of 2.0 as an example
+            # -------------------------------
+
             # 2. Stage Cost: Obstacle Avoidance
             for obs_id in self.obs_ids:
                 obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                dist = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2]))
-                if dist < 0.6:
-                    total_cost += self.W * (1.0 / (dist + 1e-3))
+                dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius
+                total_cost += self.W * (1.0 / (dist_obs + 1e-3))
             
             # 3. Stage Cost: Smoothness
-            total_cost += self.R * (v**2 + omega**2)
+            # Note: Added v and omega penalty separately as per your snippet
+            total_cost += (self.R[0] * v**2) + (self.R[0] * omega**2)
             
-        # 4. Terminal Cost: Apply ONLY to the final predicted state (temp_state after loop)
-        total_cost += self.nn_cost_to_go(temp_state)
-        # total_cost += self.heuristic_cost_to_go(temp_state)
+        # 4. Terminal Cost
+        total_cost += self.cost_to_go(temp_state)
         
         return total_cost
 
@@ -145,6 +206,7 @@ def mpc(args):
         terminal_model=trained_model, # Fixed
         norm_mean=norm_mean,
         norm_std=norm_std,
+        terminal_cost=args.terminal_cost, # "nn" or "heuristic"
         horizon_length=H, 
         goal=GOAL
     )
@@ -172,6 +234,7 @@ def mpc(args):
             
             # Extract first optimal command
             best_v, best_omega = res.x[0], res.x[1]
+            # print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
             
             # Apply to robot
             apply_control(robot_id, best_v, best_omega)
@@ -194,6 +257,7 @@ if __name__ == '__main__':
     # parser.add_argument('--learning-rate', type=float, default=1e-3, help='learning rate')
     # parser.add_argument('--weight-decay', type=float, default=1e-2, help='weight decay')
     parser.add_argument('--horizon-length', type=int, default=10, help='length of MPC horizon (number of steps to look ahead)')
+    parser.add_argument('--terminal-cost', type=str, default='heuristic', help='type of terminal cost to use ("nn" or "heuristic")')
     # Specifically requires exactly 2 values
     parser.add_argument('--start', type=float, nargs=2, default=[2.0, 2.0], help='Start position [x, y]')
     parser.add_argument('--goal', type=float, nargs=2, default=[0.0, 0.0], help='Goal position [x, y]')

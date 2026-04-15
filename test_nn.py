@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import argparse
+import numpy as np
 
 class NeuralNetwork(nn.Module):
     def __init__(self, obsv_dim, cost_dim):
@@ -26,14 +27,21 @@ def test(args):
     model.eval()
 
     # Example raw input from your dataset: 2.4466, -2.5257, 2.4295, -2.3264
-    test_input = torch.tensor([2.4295,-2.3264,2.2913,-1.7794]).float()
 
-    # 2. Run Inference
-    with torch.no_grad(): # Disables gradient calculation to save memory/speed
-        prediction = model(test_input)
+    all_tests = np.array([[2.4466,-2.5257,2.4295,-2.3264,0.2],
+                          [2.4466,-2.5257,2.4823,-2.1335,0.4],
+                          [2.4466,-2.5257,2.3874,-1.9575,0.6],
+                          [2.4466,-2.5257,2.2924,-1.7814,0.8],
+                          [2.4466,-2.5257,2.2913,-1.7794,0.8024]])
+    
+    for raw_test in all_tests:
+        test_input = torch.tensor((raw_test[0:4])).float()
 
-    print(f"Predicted Cost: {prediction.item():.4f}")
-    print(f"Actual Cost from Dataset: 0.6024")
+        # 2. Run Inference
+        with torch.no_grad(): # Disables gradient calculation to save memory/speed
+            prediction = model(test_input)
+
+        print(f"Predicted Cost: {prediction.item():.4f} | Actual Cost : {raw_test[4]}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
