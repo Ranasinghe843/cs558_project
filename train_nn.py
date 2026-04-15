@@ -4,6 +4,7 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import pickle  # ADD THIS IMPORT AT THE TOP
 import argparse
 
 class NeuralNetwork(nn.Module):
@@ -26,30 +27,50 @@ def train(args):
     EPOCHS = args.epochs
     WEIGHT_DECAY = args.weight_decay
 
-    data = np.loadtxt(args.data_path + args.data_file, delimiter=',', skiprows=1)  # shape (N, 5) where columns are [s1, s2, s3, s4, cost-to-go]
+    # 1. Load data
+    data = np.loadtxt(args.data_path + args.data_file, delimiter=',', skiprows=1)
 
-    obsv_dim = 4 # 8 for Reacher
-    cost_dim = 1 # Predicting scalar cost-to-go
+    # --- NEW: CALCULATE AND SAVE NORMALIZATION STATS ---
+    inputs = data[:, 0:4]  # start_x, start_y, goal_x, goal_y
+    mean = np.mean(inputs, axis=0)
+    std = np.std(inputs, axis=0)
 
-    model = NeuralNetwork(obsv_dim, cost_dim)  # initialize neural network
+    # Save the stats immediately so you don't lose them
+    stats = {'mean': mean, 'std': std}
+    with open(args.model_path + 'normalization_params.pkl', 'wb') as f:
+        pickle.dump(stats, f)
+    print(f"Stats saved. Mean: {mean}, Std: {std}")
+    # ----------------------------------------------------
+
+    obsv_dim = 4 
+    cost_dim = 1 
+
+    model = NeuralNetwork(obsv_dim, cost_dim)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-    criterion = nn.MSELoss() # Mean Squared Error loss for regression
+    criterion = nn.MSELoss()
+
+    # Move tensor conversion OUTSIDE the loop for efficiency
+    # and APPLY the normalization here
+    states_raw = torch.from_numpy(data[:, 0:4]).float()
+    costs = torch.from_numpy(data[:, 4:5]).float()
+
+    # --- NEW: APPLY NORMALIZATION ---
+    mean_tensor = torch.from_numpy(mean).float()
+    std_tensor = torch.from_numpy(std).float()
+    states = (states_raw - mean_tensor) / (std_tensor + 1e-8) # 1e-8 prevents div by zero
+    # --------------------------------
 
     for epoch in range(EPOCHS):
         model.train()
         optimizer.zero_grad()
 
-        # Convert data to tensors
-        states = torch.from_numpy(data[:,0:4]).float()  # shape (N, obsv_dim)
-        costs = torch.from_numpy(data[:,4:5]).float()    # shape (N, cost_dim)
-
-        # Forward pass
-        predicted_costs = model(states)  # shape (N, cost_dim)
+        # Forward pass (now using normalized states)
+        predicted_costs = model(states)
 
         # Compute loss
         loss = criterion(predicted_costs, costs)
 
-        # Backward pass and optimization step
+        # Backward pass
         loss.backward()
         optimizer.step()
 
@@ -57,7 +78,6 @@ def train(args):
             print(f'Epoch {epoch}, Loss: {loss.item():.4f}')
     
     torch.save(model.state_dict(), args.model_path + 'cost2go_weights.pth')
-
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
