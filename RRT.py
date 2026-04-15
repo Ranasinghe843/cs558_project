@@ -115,14 +115,21 @@ class RRTStar:
         new_node.cost = min_cost
         return new_node
 
+    def propagate_cost_to_children(self, parent_node):
+        for node in self.node_list:
+            if node.parent == parent_node:
+                node.cost = parent_node.cost + self.calc_dist(parent_node, node)
+                self.propagate_cost_to_children(node)
+    
     def rewire(self, new_node, near_nodes):
         for near_node in near_nodes:
             edge_node_cost = new_node.cost + self.calc_dist(new_node, near_node)
             if edge_node_cost < near_node.cost:
                 if check_collision([new_node.x, new_node.y], [near_node.x, near_node.y], 
-                                   self.obstacles, self.plane_id, self.robot_id):
+                                self.obstacles, self.plane_id, self.robot_id):
                     near_node.parent = new_node
                     near_node.cost = edge_node_cost
+                    self.propagate_cost_to_children(near_node)
 
     def generate_final_course(self, goal_node):
         path = [[self.goal.x, self.goal.y]]
