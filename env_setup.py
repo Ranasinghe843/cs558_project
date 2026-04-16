@@ -15,16 +15,20 @@ class SimulationEnv:
         self.robot_id = p.loadURDF("turtlebot3_burger.urdf", self.start_pos)
         
         self.bounds = [-3.0, 3.0, -3.0, 3.0]
-        
-        self.obstacles = self._setup_obstacles()
 
-    def _setup_obstacles(self):
-        box_positions = [
+        self.box_positions = [
             [1, 1, 0.25],
             [-1, 1, 0.30],
             [0, 0, 0.35]
         ]
-        box_half_extents = [0.25, 0.30, 0.35]
+
+        self.box_sizes = [0.5, 0.6, 0.7]
+        
+        self.obstacles = self._setup_obstacles()
+
+    def _setup_obstacles(self):
+        box_positions = self.box_positions
+        box_half_extents = [x/2 for x in self.box_sizes]
         obs_ids = []
         for i in range(len(box_positions)):
             obs_ids.append(self.create_inflated_box(box_positions[i], box_half_extents[i]))
