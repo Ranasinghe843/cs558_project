@@ -1,19 +1,27 @@
-Use requirements file to setup a conda environment,
+Setup a conda environment,
 
-`conda create --name cs558_project --file requirements.txt`
+`conda create --name cs558_project python=3.11`
 
-and activate,
+activate,
 
 `conda activate cs558_project`
+
+and install the required packages,
+
+`pip install -r requirements.txt`
 
 For generating dataset, run,
 
 `python gen_dataset.py`
 
-For viewing environment, run,
-
-`python env.py`
-
 For visualizing a example RRT* run,
 
 `python visualize_rrt.py`
+
+For training the neural network,
+
+`python train_nn.py`
+
+To produce performance evaluation graphs and metrics for the model,
+
+`python test_nn_graphs.py`
