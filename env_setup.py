@@ -30,7 +30,7 @@ class SimulationEnv:
             obs_ids.append(self.create_inflated_box(box_positions[i], box_half_extents[i]))
         return obs_ids
 
-    def create_inflated_box(self, pos, half_extent, inflation_radius=0.1):
+    def create_inflated_box(self, pos, half_extent, inflation_radius=0.0):
         base_half_extents = [half_extent, half_extent, half_extent]
         inflated_half_extents = [
             base_half_extents[0] + inflation_radius,
