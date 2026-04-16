@@ -1,3 +1,7 @@
+# folders and paths
+data_folder: "data"
+nn_folder: "models"
+
 # Environment
 bounds:
       - -3.0
@@ -7,4 +11,23 @@ bounds:
 
 # Dataset Generation
 num_samples: 10000
-data_folder: "data"
+version: 1
+
+# Neural Network
+learning_rate: 100
+epochs: 200
+
+# MPC
+horizon_length: 10
+terminal_cost_type: "heuristic"
+start: [-2.0, 1.0]
+goal: [1.0, 0.0]
+Q: [0.03, 0.002]
+R: [0.005, 0.005]
+W: 0.05
+
+
+
+
+
+

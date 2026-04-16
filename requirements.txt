@@ -31,3 +31,4 @@ torch
 torchvision
 matplotlib
 scikit-learn
+pyyaml

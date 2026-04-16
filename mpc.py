@@ -8,40 +8,24 @@ import pickle
 import torch.nn as nn
 import argparse
 from env_setup import SimulationEnv
+from nn import NeuralNetwork
+import yaml
+from shlex import split
 
-class NeuralNetwork(nn.Module):
-    def __init__(self, obsv_dim, cost_dim):
-        super(NeuralNetwork, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(obsv_dim, 64),
-            nn.ReLU(),
-            
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            
-            nn.Linear(32, cost_dim),
-            nn.Softplus()
-        )
-
-    def forward(self, x):
-        return self.net(x)
-    
 class MPCConfig:
-    def __init__(self, robot_id, obs_ids, terminal_model, norm_mean, norm_std, terminal_cost="nn", horizon_length=10, goal=[0.0, 0.0]):
+    def __init__(self, robot_id, obs_ids, terminal_model, terminal_cost_type, horizon_length, goal, Q, R, W):
         self.horizon_length = horizon_length
         self.goal = np.array(goal)
         self.robot_id = robot_id
         self.robot_radius = 0.105
-        self.safe_dist = 1.0 
+        self.safe_dist = 0.20 
         self.dt = 0.1
         self.terminal_cost_model = terminal_model 
         self.obs_ids = obs_ids
-        self.norm_mean = norm_mean
-        self.norm_std = norm_std
-        self.terminal_cost_type = terminal_cost 
-        self.Q = np.array([0.5, 0.00]) 
-        self.R = np.array([0.01, 0.01]) 
-        self.W = 1.0
+        self.terminal_cost_type = terminal_cost_type 
+        self.Q = np.array(Q)
+        self.R = np.array(R)
+        self.W = np.array(W)
 
         # 2. Assign the FUNCTION REFERENCE (No parentheses here!)
         if self.terminal_cost_type == "nn":
@@ -106,6 +90,7 @@ class MPCConfig:
             total_cost += (self.R[0] * v**2) + (self.R[0] * omega**2)
             
         cost2go = self.cost_to_go(temp_state) 
+        print(f"stage: {total_cost}, terminal: {cost2go:.4f}")
         total_cost += cost2go
 
         return total_cost
@@ -119,19 +104,18 @@ def apply_control(robot_id, v, omega):
     p.setJointMotorControl2(robot_id, 1, p.VELOCITY_CONTROL, targetVelocity=left_v)
     p.setJointMotorControl2(robot_id, 2, p.VELOCITY_CONTROL, targetVelocity=right_v)
 
-def mpc(args):
+def mpc(config):
+    num_samples = config['num_samples']
+    data_version = config['version']
+    data_path = f"{config['data_folder']}/'cost2go_{num_samples}_{data_version}.csv"
+    epochs = config['epochs']
 
-    with open(args.model_path + 'norm_params.pkl', 'rb') as f:
-        stats = pickle.load(f)
-        norm_mean = torch.tensor(stats['mean']).float()
-        norm_std = torch.tensor(stats['std']).float()
+    H = config['horizon_length']             
+    GOAL = np.array(config['goal'])
+    START = np.concatenate([np.array(config['start']), [0]])
+    bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H # on robot commands (v, omega) for each step in horizon
 
-    H = args.horizon_length              
-    GOAL = np.array(args.goal)
-    START = np.concatenate([np.array(args.start), [0]])
-    bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H 
-
-    env = SimulationEnv(render=True, start_pos_2d=args.start)
+    env = SimulationEnv(render=True, start_pos_2d=config['start'])
     pt_start = [START[0], START[1], 0.05]
     pt_goal  = [GOAL[0], GOAL[1], 0.05]
 
@@ -139,18 +123,21 @@ def mpc(args):
     p.addUserDebugPoints([pt_goal], pointColorsRGB=[[0, 1, 0]], pointSize=15.0)
 
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    trained_model.load_state_dict(torch.load(args.model_path + 'cost2go_weights.pth'))
+    # weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    weight_path = f"{config['nn_folder']}/cost2go_weights.pth"
+    trained_model.load_state_dict(torch.load(weight_path))
     trained_model.eval()
     
     MPC = MPCConfig(
         robot_id=env.robot_id, 
         obs_ids=env.obstacles, 
         terminal_model=trained_model, 
-        norm_mean=norm_mean,
-        norm_std=norm_std,
-        terminal_cost=args.terminal_cost,
+        terminal_cost_type=config['terminal_cost_type'],
         horizon_length=H, 
-        goal=GOAL
+        goal=GOAL,
+        Q=config['Q'],
+        R=config['R'],
+        W=config['W']
     )
     u_guess = np.zeros(H * 2) 
 
@@ -188,14 +175,9 @@ def mpc(args):
         p.disconnect()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model-path', type=str, default='./models/', help='path to the model file')
-    parser.add_argument('--horizon-length', type=int, default=10, help='length of MPC horizon (number of steps to look ahead)')
-    parser.add_argument('--terminal-cost', type=str, default='heuristic', help='type of terminal cost to use ("nn" or "heuristic")')
-    parser.add_argument('--start', type=float, nargs=2, default=[-2.0, 1.0], help='Start position [x, y]')
-    parser.add_argument('--goal', type=float, nargs=2, default=[1.0, 0.0], help='Goal position [x, y]')
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-    args = parser.parse_args()
-    print(args)
-    mpc(args)
+    print(config)
+    mpc(config)
