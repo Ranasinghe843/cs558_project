@@ -25,3 +25,7 @@ For training the neural network,
 To produce performance evaluation graphs and metrics for the model,
 
 `python test_nn_graphs.py`
+
+To produce mpc results, specify terminal cost type in `config.yaml` and run.
+
+`mpc.py`
