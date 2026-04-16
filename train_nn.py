@@ -69,8 +69,8 @@ if __name__ == '__main__':
     parser.add_argument('--data-path', type=str, default='./data/', help='path to the data folder')
     parser.add_argument('--model-path', type=str, default='./models/', help='path to the model file')
     parser.add_argument('--data-file', type=str, default='cost2go_6000_1.csv', help='path to the data file')
-    parser.add_argument('--learning-rate', type=float, default=1e-3, help='learning rate')
-    parser.add_argument('--epochs', type=int, default=100, help='number of epochs')
+    parser.add_argument('--learning-rate', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--epochs', type=int, default=200, help='number of epochs')
 
     args = parser.parse_args()
     print(args)
