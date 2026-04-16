@@ -4,48 +4,21 @@ import csv
 import math
 import random
 import datetime
-
 from RRT import RRTStar
+from pathlib import Path
+from env_setup import SimulationEnv
 
-physicsClient = p.connect(p.DIRECT) 
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-p.setGravity(0, 0, -9.81)
-
-planeId = p.loadURDF("plane.urdf")
-
-startPos = [0, 0, 0.01]
-startOrientation = p.getQuaternionFromEuler([0, 0, 0])
-robot_id = p.loadURDF("turtlebot3_burger.urdf", startPos, startOrientation)
-
-def create_box(pos, inflation_radius=0.15):
-    
-    base_half_extents = [0.25, 0.25, 0.25]
-    
-    inflated_half_extents = [
-        base_half_extents[0] + inflation_radius,
-        base_half_extents[1] + inflation_radius,
-        base_half_extents[2] + inflation_radius
-    ]
-    
-    col_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=inflated_half_extents)
-    
-    vis_id = p.createVisualShape(p.GEOM_BOX, halfExtents=base_half_extents, rgbaColor=[0.6, 0.6, 0.6, 1])
-    
-    box_id = p.createMultiBody(
-        baseMass=0,
-        baseCollisionShapeIndex=col_id, 
-        baseVisualShapeIndex=vis_id, 
-        basePosition=pos
-    )
-    return box_id
-
-obstacles = [create_box([1, 1, 0.25]), create_box([-1, 1, 0.25])]
+env = SimulationEnv(render=False)
 
 NUM_SAMPLES = 10000
-DATASET_FILENAME = f'cost_to_go_{NUM_SAMPLES}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
+Path("data").mkdir(exist_ok=True)
+counter = 1
+while Path(f"data/cost2go_{NUM_SAMPLES}_{counter}.csv").exists():
+    counter += 1
+DATASET_FILENAME = f"data/cost2go_{NUM_SAMPLES}_{counter}.csv"
 BOUNDS = [-3.0, 3.0, -3.0, 3.0]
 
-def is_point_valid(x, y, obstacles_list, plane_id, robot_id):
+def is_point_valid(x, y, plane_id, robot_id):
     ray_start = [x, y, 1.0]
     ray_end = [x, y, 0.0]
     result = p.rayTest(ray_start, ray_end)[0]
@@ -57,7 +30,7 @@ def generate_random_valid_point():
     while True:
         x = random.uniform(BOUNDS[0], BOUNDS[1])
         y = random.uniform(BOUNDS[2], BOUNDS[3])
-        if is_point_valid(x, y, obstacles, planeId, robot_id):
+        if is_point_valid(x, y, env.plane_id, env.robot_id):
             return [x, y]
 
 print(f"Starting dataset generation: Target {NUM_SAMPLES} data points...")
@@ -80,12 +53,12 @@ with open(DATASET_FILENAME, mode='w', newline='') as file:
             start=start_pt,
             goal=goal_pt,
             bounds=BOUNDS,
-            obstacles=obstacles,
-            plane_id=planeId,
-            robot_id=robot_id,
-            step_size=0.2,
-            search_radius=0.5,
-            max_iter=3000
+            obstacles=env.obstacles,
+            plane_id=env.plane_id,
+            robot_id=env.robot_id,
+            step_size=0.1,
+            search_radius=7.5,
+            max_iter=5000
         )
         
         result = rrt.plan()
@@ -93,33 +66,32 @@ with open(DATASET_FILENAME, mode='w', newline='') as file:
         if result is not None:
             path_coords, _ = result
             
-            path_coords.reverse()
+            path_coords.reverse() 
             
             cum_dist = [0.0]
             for i in range(1, len(path_coords)):
                 d = math.dist(path_coords[i-1], path_coords[i])
                 cum_dist.append(cum_dist[-1] + d)
             
+            total_path_length = cum_dist[-1]
+            start_node = path_coords[0]
+            goal_node = path_coords[-1]
+            
             for i in range(len(path_coords)):
-                for j in range(i + 1, len(path_coords)):
-                    sub_start = path_coords[i]
-                    sub_goal = path_coords[j]
-                    sub_cost = cum_dist[j] - cum_dist[i]
-                    
-                    writer.writerow([
-                        round(sub_start[0], 4), 
-                        round(sub_start[1], 4), 
-                        round(sub_goal[0], 4), 
-                        round(sub_goal[1], 4), 
-                        round(sub_cost, 4)
-                    ])
-                    
-                    data_points_collected += 1
-                    
-                    if data_points_collected >= NUM_SAMPLES:
-                        break
-                if data_points_collected >= NUM_SAMPLES:
-                    break
+                current_pt = path_coords[i]
+                
+                writer.writerow([
+                    round(start_node[0], 4), round(start_node[1], 4), 
+                    round(current_pt[0], 4), round(current_pt[1], 4), 
+                    round(cum_dist[i], 4)
+                ])
+                
+                writer.writerow([
+                    round(current_pt[0], 4), round(current_pt[1], 4), 
+                    round(goal_node[0], 4), round(goal_node[1], 4), 
+                    round(total_path_length - cum_dist[i], 4)
+                ])
+                data_points_collected += 2
             
             paths_generated += 1
             print(f"Progress: {data_points_collected}/{NUM_SAMPLES} data points from {paths_generated} full paths.")

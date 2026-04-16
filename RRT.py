@@ -139,6 +139,19 @@ class RRTStar:
             node = node.parent
         path.append([self.start.x, self.start.y])
         return path, goal_node.cost
+    
+    def generate_final_course(self, goal_node):
+        path = [[self.goal.x, self.goal.y]]
+        node = goal_node
+        while node.parent is not None:
+            if math.dist([node.x, node.y], path[-1]) > 1e-6:
+                path.append([node.x, node.y])
+            node = node.parent
+            
+        if math.dist([self.start.x, self.start.y], path[-1]) > 1e-6:
+            path.append([self.start.x, self.start.y])
+            
+        return path, goal_node.cost
 
     def calc_dist(self, from_node, to_node):
         return math.dist([from_node.x, from_node.y], [to_node.x, to_node.y])
