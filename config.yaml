@@ -1,0 +1,10 @@
+# Environment
+bounds:
+      - -3.0
+      - 3.0
+      - -3.0
+      - 3.0
+
+# Dataset Generation
+num_samples: 10000
+data_folder: "data"

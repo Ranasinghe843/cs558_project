@@ -18,7 +18,7 @@ class Node:
         self.cost = 0.0
 
 class RRTStar:
-    def __init__(self, start, goal, bounds, obstacles, plane_id, robot_id, 
+    def __init__(self, start, goal, bounds, obstacles, plane_id, robot_id,
                  step_size=0.5, search_radius=1.0, max_iter=5000):
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
