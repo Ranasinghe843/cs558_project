@@ -12,7 +12,7 @@ def train(config):
 
     num_samples = config['num_samples']
     data_version = config['version']
-    data_path = f"{config['data_folder']}/'cost2go_{num_samples}_{data_version}.csv"
+    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
     lr = 1/config['learning_rate']
     

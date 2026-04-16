@@ -11,7 +11,7 @@ def test(config):
 
     num_samples = config['num_samples']
     data_version = config['version']
-    data_path = f"{config['data_folder']}/'cost2go_{num_samples}_{data_version}.csv"
+    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
 
     data = np.loadtxt(data_path, delimiter=',', skiprows=1)
@@ -20,6 +20,7 @@ def test(config):
 
     model = NeuralNetwork(obsv_dim=4, cost_dim=1)
     weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    print("Loading model weights from:", weight_path)
     model.load_state_dict(torch.load(weight_path))
 
     model.eval()
@@ -35,8 +36,9 @@ def test(config):
 
         actual = raw_test[4]
         pred_val = prediction.item()
-        error = abs(pred_val - actual)
+        error = (pred_val - actual)
 
+        print(f" Error: {error:.4f}")
         avg_error += error
 
     avg_error /= len(totest)

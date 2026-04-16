@@ -4,21 +4,8 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-
-class NeuralNetwork(nn.Module):
-    def __init__(self, obsv_dim, cost_dim):
-        super(NeuralNetwork, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(obsv_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 32), 
-            nn.ReLU(),
-            nn.Linear(32, cost_dim),
-            nn.Softplus() 
-        )
-
-    def forward(self, x):
-        return self.net(x)
+from nn import NeuralNetwork
+import yaml
 
 def run_visualizations(actual_c2g, prediction_c2g):
     actual_c2g = np.array(actual_c2g)
@@ -49,15 +36,23 @@ def run_visualizations(actual_c2g, prediction_c2g):
     plt.tight_layout()
     plt.show()
 
-def test(args):
-    print(f"Loading data from: {args.data_file}...")
-    data = np.loadtxt(args.data_path + args.data_file, delimiter=',', skiprows=1)
+def test(config):
+
+    num_samples = config['num_samples']
+    data_version = config['version']
+    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
+    epochs = config['epochs']
+
+    print(f"Loading data from: {data_path}")
+    data = np.loadtxt(data_path, delimiter=',', skiprows=1)
     np.random.shuffle(data)
     
     totest = data[0:1000] if len(data) > 1000 else data
 
     model = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    weight_path = args.model_path + 'cost2go_weights.pth'
+    weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    print("Loading model weights from:", weight_path)
+    model.load_state_dict(torch.load(weight_path))
     
     try:
         model.load_state_dict(torch.load(weight_path))
@@ -97,10 +92,8 @@ def test(args):
     run_visualizations(all_actuals, all_preds)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data-path', type=str, default='./data/', help='path to the data folder')
-    parser.add_argument('--model-path', type=str, default='./models/', help='path to the model file')
-    parser.add_argument('--data-file', type=str, default='cost2go_6000_1.csv', help='path to the data file')
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-    args = parser.parse_args()
-    test(args)
+    print(config)
+    test(config)

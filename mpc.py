@@ -18,7 +18,6 @@ class MPCConfig:
         self.goal = np.array(goal)
         self.robot_id = robot_id
         self.robot_radius = 0.105
-        self.safe_dist = 0.20 
         self.dt = 0.1
         self.terminal_cost_model = terminal_model 
         self.obs_ids = obs_ids
@@ -83,14 +82,24 @@ class MPCConfig:
 
             for obs_id in self.obs_ids:
                 obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius
-                if dist_obs < self.safe_dist:
-                    total_cost += self.W * (1.0 / (dist_obs + 1e-3))
+                obs_xy = np.array(obs_pos[:2])
+                diff = temp_state[:2] - obs_xy
+                dist_obs = np.linalg.norm(diff) - self.robot_radius - (0.35*np.sqrt(2))
+
+                HARD_MARGIN = self.robot_radius + 0.05 
+
+                for obs_id in self.obs_ids:
+                    obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
+                    dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius - (0.35*np.sqrt(2)) 
+                    
+                    if dist_obs < HARD_MARGIN:
+                        total_cost += self.W * (1.0 / (dist_obs + 1e-3)) 
+                        
+            total_cost += (self.R[0] * v**2) + (self.R[1] * omega**2)
             
-            total_cost += (self.R[0] * v**2) + (self.R[0] * omega**2)
-            
-        cost2go = self.cost_to_go(temp_state) 
-        print(f"stage: {total_cost}, terminal: {cost2go:.4f}")
+        cost2go = self.cost_to_go(temp_state)
+        
+        # print(f"stage: {total_cost}, terminal: {cost2go:.4f}")
         total_cost += cost2go
 
         return total_cost
@@ -107,7 +116,7 @@ def apply_control(robot_id, v, omega):
 def mpc(config):
     num_samples = config['num_samples']
     data_version = config['version']
-    data_path = f"{config['data_folder']}/'cost2go_{num_samples}_{data_version}.csv"
+    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
 
     H = config['horizon_length']             
@@ -123,8 +132,9 @@ def mpc(config):
     p.addUserDebugPoints([pt_goal], pointColorsRGB=[[0, 1, 0]], pointSize=15.0)
 
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    # weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
-    weight_path = f"{config['nn_folder']}/cost2go_weights.pth"
+    weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    # weight_path = f"{config['nn_folder']}/cost2go_weights.pth"
+    print("Loading model weights from:", weight_path)
     trained_model.load_state_dict(torch.load(weight_path))
     trained_model.eval()
     
@@ -169,7 +179,7 @@ def mpc(config):
             u_guess = res.x 
             
             p.stepSimulation()
-            # time.sleep(1./240.)
+            time.sleep(1./240.)
 
     except KeyboardInterrupt:
         p.disconnect()
