@@ -2,7 +2,7 @@ import math
 import random
 import pybullet as p
 
-def check_collision(node_a, node_b, obstacles_list, plane_id, robot_id, z_offset=0.2):
+def check_collision(node_a, node_b, plane_id, robot_id, z_offset=0.2):
     ray_start = [node_a[0], node_a[1], z_offset]
     ray_end = [node_b[0], node_b[1], z_offset]
 
@@ -42,7 +42,7 @@ class RRTStar:
             new_node = self.steer(nearest_node, rnd_node, self.step_size)
             
             if check_collision([nearest_node.x, nearest_node.y], [new_node.x, new_node.y], 
-                               self.obstacles, self.plane_id, self.robot_id):
+                               self.plane_id, self.robot_id):
                 
                 near_nodes = self.find_near_nodes(new_node)
                 new_node = self.choose_best_parent(new_node, near_nodes)
@@ -54,7 +54,7 @@ class RRTStar:
                     if self.calc_dist(new_node, self.goal) <= self.step_size:
                         final_node = self.steer(new_node, self.goal, self.step_size)
                         if check_collision([new_node.x, new_node.y], [final_node.x, final_node.y], 
-                                           self.obstacles, self.plane_id, self.robot_id):
+                                           self.plane_id, self.robot_id):
                             
                             if best_goal_node is None or final_node.cost < best_goal_node.cost:
                                 best_goal_node = final_node
@@ -101,7 +101,7 @@ class RRTStar:
         costs = []
         for near_node in near_nodes:
             if check_collision([near_node.x, near_node.y], [new_node.x, new_node.y], 
-                               self.obstacles, self.plane_id, self.robot_id):
+                               self.plane_id, self.robot_id):
                 costs.append(near_node.cost + self.calc_dist(near_node, new_node))
             else:
                 costs.append(float("inf"))
@@ -126,7 +126,7 @@ class RRTStar:
             edge_node_cost = new_node.cost + self.calc_dist(new_node, near_node)
             if edge_node_cost < near_node.cost:
                 if check_collision([new_node.x, new_node.y], [near_node.x, near_node.y], 
-                                self.obstacles, self.plane_id, self.robot_id):
+                                self.plane_id, self.robot_id):
                     near_node.parent = new_node
                     near_node.cost = edge_node_cost
                     self.propagate_cost_to_children(near_node)
