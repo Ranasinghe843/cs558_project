@@ -7,16 +7,28 @@ import torch
 import pickle
 import torch.nn as nn
 import argparse
+from env_setup import SimulationEnv
 
 class NeuralNetwork(nn.Module):
     def __init__(self, obsv_dim, cost_dim):
         super(NeuralNetwork, self).__init__()
+        # Network to predict cost-to-go between two states
         self.net = nn.Sequential(
+            # Layer 1: Initial feature extraction
             nn.Linear(obsv_dim, 64),
-            nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh(),
-            nn.Linear(64, cost_dim),
+            # nn.Tanh(),
+            nn.ReLU(),
+            # nn.Dropout(p=0.1), # Keep dropout light for regression
+            
+            # Layer 2: The "Funnel" (Compressing to 32)
+            nn.Linear(64, 32), 
+            # nn.Tanh(),
+            nn.ReLU(),
+            # nn.Dropout(p=0.1),
+            
+            # Layer 3: Output (Must match the 32 from above)
+            nn.Linear(32, cost_dim),
+            nn.Softplus() # Ensures smooth, positive cost-to-go
         )
 
     def forward(self, x):
@@ -41,6 +53,9 @@ class MPCConfig:
         if self.terminal_cost_type == "nn":
             print("Using Neural Network for Terminal Cost")
             self.cost_to_go = self.nn_cost_to_go
+            self.Q = np.array([2.0, 0.5]) 
+            self.R = np.array([0.2, 0.2]) # Control effort weights for [v, omega] 
+            self.W = 2.4 
         elif self.terminal_cost_type == "heuristic":
             print("Using Heuristic for Terminal Cost")
             self.cost_to_go = self.heuristic_cost_to_go
@@ -70,10 +85,10 @@ class MPCConfig:
         """Uses the Neural Network on the predicted FUTURE state"""
         raw_input = torch.tensor([state[0], state[1], self.goal[0], self.goal[1]]).float()
         # YOU MUST DO THIS if you did it during training:
-        normalized_input = (raw_input - self.norm_mean) / self.norm_std 
+        # normalized_input = (raw_input - self.norm_mean) / self.norm_std 
         
         with torch.no_grad():
-            prediction = self.terminal_cost_model(normalized_input)
+            prediction = self.terminal_cost_model(raw_input)
         return prediction.item()
 
     def objective_function(self, u_flattened):
@@ -111,23 +126,21 @@ class MPCConfig:
             for obs_id in self.obs_ids:
                 obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
                 dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius
-                # total_cost += self.W * (1.0 / (dist_obs + 1e-3))
-                total_cost += self.W * np.maximum(0, self.safe_dist - dist_obs)**2
+                total_cost += self.W * (1.0 / (dist_obs + 1e-3))
+                # total_cost += self.W * np.maximum(0, self.safe_dist - dist_obs)**2
             
             # 3. Stage Cost: Smoothness
             # Note: Added v and omega penalty separately as per your snippet
             total_cost += (self.R[0] * v**2) + (self.R[0] * omega**2)
             
         # 4. Terminal Cost
-        total_cost += self.cost_to_go(temp_state)
+        cost2go = self.cost_to_go(temp_state) * 20.0
+        # print(f"Terminal Cost: {cost2go:.3f}, Stage Cost: {total_cost:.3f}")
+        total_cost += cost2go
+
+        
         
         return total_cost
-
-# Obstacle creation from your original script
-def create_box(pos):
-    col_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.25, 0.25, 0.25])
-    vis_id = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.25, 0.25, 0.25], rgbaColor=[0.6, 0.6, 0.6, 1])
-    return p.createMultiBody(0, col_id, vis_id, pos)
 
 
 def apply_control(robot_id, v, omega):
@@ -140,12 +153,8 @@ def apply_control(robot_id, v, omega):
     p.setJointMotorControl2(robot_id, 2, p.VELOCITY_CONTROL, targetVelocity=right_v)
 
 def mpc(args):
-    # --- MAIN CONTROL LOOP ---
-    terminalCost = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    terminalCost.load_state_dict(torch.load(args.model_path + 'cost2go_weights.pth'))
-    terminalCost.eval()
 
-    with open(args.model_path + 'normalization_params.pkl', 'rb') as f:
+    with open(args.model_path + 'norm_params.pkl', 'rb') as f:
         stats = pickle.load(f)
         # Ensure these are tensors for fast math
         norm_mean = torch.tensor(stats['mean']).float()
@@ -156,22 +165,25 @@ def mpc(args):
     START = np.concatenate([np.array(args.start), [0]])
     bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H # Burger hardware limits
 
-    # --- PHYSICS SETUP ---
-    physicsClient = p.connect(p.GUI)
-    p.setAdditionalSearchPath(pybullet_data.getDataPath())
-    p.setGravity(0, 0, -9.81)
-    p.setRealTimeSimulation(0)
-    p.loadURDF("plane.urdf")
+    env = SimulationEnv(render=True, start_pos_2d=args.start)
+    # 1. Prepare 3D coordinates (x, y, z)
+    # Adding a small Z offset (0.05) keeps the points visible above the floor
+    pt_start = [START[0], START[1], 0.05]
+    pt_goal  = [GOAL[0], GOAL[1], 0.05]
+
+    # 2. Display Start Point (Red)
+    p.addUserDebugPoints([pt_start], pointColorsRGB=[[1, 0, 0]], pointSize=15.0)
+
+    # 3. Display Goal Point (Green)
+    p.addUserDebugPoints([pt_goal], pointColorsRGB=[[0, 1, 0]], pointSize=15.0)
 
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1)
     trained_model.load_state_dict(torch.load(args.model_path + 'cost2go_weights.pth'))
     trained_model.eval()
-
-    robot_id = p.loadURDF("turtlebot3_burger.urdf", START, p.getQuaternionFromEuler([0, 0, 0]))
-    obs_ids = [create_box([1, 1, 0.25]), create_box([-1, 1, 0.25])]
+    
     MPC = MPCConfig(
-        robot_id=robot_id, 
-        obs_ids=obs_ids, 
+        robot_id=env.robot_id, 
+        obs_ids=env.obstacles, 
         terminal_model=trained_model, # Fixed
         norm_mean=norm_mean,
         norm_std=norm_std,
@@ -190,7 +202,7 @@ def mpc(args):
             # Check if goal reached
             if np.linalg.norm(state[:2] - GOAL) < 0.1:
                 print("Goal Reached!")
-                apply_control(robot_id , 0, 0) # Stop the robot
+                apply_control(env.robot_id , 0, 0) # Stop the robot
                 break
 
             # Solve MPC Optimization
@@ -206,7 +218,7 @@ def mpc(args):
             # print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
             
             # Apply to robot
-            apply_control(robot_id, best_v, best_omega)
+            apply_control(env.robot_id, best_v, best_omega)
             
             # Warm start for next loop
             u_guess = res.x 
@@ -228,10 +240,9 @@ if __name__ == '__main__':
     parser.add_argument('--horizon-length', type=int, default=10, help='length of MPC horizon (number of steps to look ahead)')
     parser.add_argument('--terminal-cost', type=str, default='heuristic', help='type of terminal cost to use ("nn" or "heuristic")')
     # Specifically requires exactly 2 values
-    parser.add_argument('--start', type=float, nargs=2, default=[2.0, 2.0], help='Start position [x, y]')
-    parser.add_argument('--goal', type=float, nargs=2, default=[0.0, 0.0], help='Goal position [x, y]')
+    parser.add_argument('--start', type=float, nargs=2, default=[-2.0, 0.0], help='Start position [x, y]')
+    parser.add_argument('--goal', type=float, nargs=2, default=[2.0, 0.0], help='Goal position [x, y]')
 
     args = parser.parse_args()
-    # print(args)
-    # train(args)
+    print(args)
     mpc(args)
