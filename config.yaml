@@ -3,11 +3,45 @@ data_folder: "data"
 nn_folder: "models"
 
 # Environment
-bounds:
-      - -3.0
-      - 3.0
-      - -3.0
-      - 3.0
+bounds: [-2.0, 2.0, -2.0, 2.0]
+
+obstacles:
+      box1:
+        - -0.5
+        - -0.5
+        - 0.6
+      box2:
+        - -1.2
+        - 1.2
+        - 0.3
+      box3:
+        - 0.8
+        - 1.0
+        - 0.3
+      box4:
+        - 0.4
+        - -1.1
+        - 0.3
+      box5:
+        - 0.9
+        - 0.1
+        - 0.3
+      box6:
+        - -1.5
+        - -1.0
+        - 0.2
+      box7:
+        - 1.2
+        - -0.6
+        - 0.2
+      box8:
+        - -0.9
+        - 0.3
+        - 0.15
+      box9:
+        - 0.0
+        - 0.8
+        - 0.15
 
 # Dataset Generation
 num_samples: 10000

@@ -1,8 +1,12 @@
 import pybullet as p
 import pybullet_data
+import yaml
+import time
+
+CONFIG_FILE = "config.yaml"
 
 class SimulationEnv:
-    def __init__(self, render=True, start_pos_2d=[0, 0]):
+    def __init__(self, render=True, start_pos_2d=[0, 0], inflation_radius=0.11):
         self.mode = p.GUI if render else p.DIRECT
         self.client = p.connect(self.mode)
         
@@ -13,32 +17,29 @@ class SimulationEnv:
         
         self.start_pos = [start_pos_2d[0], start_pos_2d[1], 0.01]
         self.robot_id = p.loadURDF("turtlebot3_burger.urdf", self.start_pos)
-        
-        self.bounds = [-3.0, 3.0, -3.0, 3.0]
 
-        self.box_positions = [
-            [1, 1, 0.25],
-            [-1, 1, 0.30],
-            [0, 0, 0.35]
-        ]
-
-        self.box_sizes = [0.5, 0.6, 0.7]
+        with open(CONFIG_FILE, 'r') as file:
+            self.config = yaml.safe_load(file)
         
+        self.bounds = self.config['bounds']
+
+        self.inflation_radius = inflation_radius
+
         self.obstacles = self._setup_obstacles()
 
+        self._draw_boarder()
+
     def _setup_obstacles(self):
-        box_positions = self.box_positions
-        box_half_extents = [x/2 for x in self.box_sizes]
         obs_ids = []
-        for i in range(len(box_positions)):
-            obs_ids.append(self.create_inflated_box(box_positions[i], box_half_extents[i]))
+        for _, values in self.config['obstacles'].items():
+            obs_ids.append(self.create_inflated_box(values[0:2] + [values[2] / 2], values[2] / 2))
         return obs_ids
 
-    def create_inflated_box(self, pos, half_extent, inflation_radius=0.11):
+    def create_inflated_box(self, pos, half_extent):
         base_half_extents = [half_extent, half_extent, half_extent]
         inflated_half_extents = [
-            base_half_extents[0] + inflation_radius,
-            base_half_extents[1] + inflation_radius,
+            base_half_extents[0] + self.inflation_radius,
+            base_half_extents[1] + self.inflation_radius,
             base_half_extents[2]
         ]
         
@@ -55,6 +56,32 @@ class SimulationEnv:
         box_id = p.createMultiBody(0, col_id, ghost_vis_id, pos)
         p.createMultiBody(0, -1, core_vis_id, pos)
         return box_id
+    
+    def _draw_boarder(self):
+        p.addUserDebugLine([self.bounds[0], self.bounds[2], 0.05], [self.bounds[0], self.bounds[3], 0.05], lineColorRGB=[0, 0, 0], lineWidth=2.0)
+        p.addUserDebugLine([self.bounds[1], self.bounds[2], 0.05], [self.bounds[1], self.bounds[3], 0.05], lineColorRGB=[0, 0, 0], lineWidth=2.0)
+        p.addUserDebugLine([self.bounds[0], self.bounds[2], 0.05], [self.bounds[1], self.bounds[2], 0.05], lineColorRGB=[0, 0, 0], lineWidth=2.0)
+        p.addUserDebugLine([self.bounds[0], self.bounds[3], 0.05], [self.bounds[1], self.bounds[3], 0.05], lineColorRGB=[0, 0, 0], lineWidth=2.0)
 
     def disconnect(self):
         p.disconnect(self.client)
+
+if __name__ == '__main__':
+
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+
+    env = SimulationEnv(render=True, start_pos_2d=[0,0])
+
+    def apply_wheel_velocities(left_v, right_v):
+        p.setJointMotorControl2(env.robot_id, 1, p.VELOCITY_CONTROL, targetVelocity=left_v)
+        p.setJointMotorControl2(env.robot_id, 2, p.VELOCITY_CONTROL, targetVelocity=right_v)
+
+    try:
+        while True:
+            apply_wheel_velocities(0.5, 0.5)
+            
+            p.stepSimulation()
+            time.sleep(1./240.)
+    except KeyboardInterrupt:
+        env.disconnect()
