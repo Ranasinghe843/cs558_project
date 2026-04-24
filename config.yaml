@@ -1,6 +1,7 @@
 # folders and paths
 data_folder: "data"
 nn_folder: "models"
+prm_folder: "prm"
 
 # Environment
 bounds: [-2.0, 2.0, -2.0, 2.0]
@@ -43,8 +44,9 @@ obstacles:
         - 0.8
         - 0.15
 
-# Dataset Generation
-num_samples: 10000
+# PRM
+nodes: 2000
+num_samples: 10
 version: 1
 
 # Neural Network
@@ -59,9 +61,3 @@ goal: [0.0, 1.0]
 Q: [0.01, 0.001]
 R: [0.001, 0.001]
 W: 0.001
-
-
-
-
-
-
