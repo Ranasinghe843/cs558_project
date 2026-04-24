@@ -15,8 +15,9 @@ def train(config):
     data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
     lr = 1/config['learning_rate']
-    
+    nn_version = config['nn_version']
     raw_data = np.loadtxt(data_path, delimiter=',', skiprows=1)
+    print(f"Loaded data from {data_path}, shape: {raw_data.shape}")
     np.random.shuffle(raw_data)
 
     inputs_raw = raw_data[:, 0:4]
@@ -47,7 +48,8 @@ def train(config):
             avg_loss = epoch_loss / len(loader)
             print(f'Epoch {epoch}, Avg Loss: {avg_loss:.6f}')
     
-    torch.save(model.state_dict(), f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth")
+    torch.save(model.state_dict(), f"{config['nn_folder']}/nn{nn_version}_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth")
+    # torch.save(model.state_dict(), f"{config['nn_folder']}/data_PRMstar/nn_{epochs}_{config['learning_rate']}.pth")
 
 if __name__ == '__main__':
 

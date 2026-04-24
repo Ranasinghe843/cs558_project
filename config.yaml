@@ -1,6 +1,6 @@
 # folders and paths
-data_folder: "data"
-nn_folder: "models"
+data_folder: "data/data_PRMstar"
+nn_folder: "models/data_PRMstar"
 prm_folder: "prm"
 
 # Environment
@@ -46,18 +46,19 @@ obstacles:
 
 # PRM
 nodes: 2000
-num_samples: 10
+num_samples: 100000
 version: 1
 
 # Neural Network
 learning_rate: 100 # will be used as 1/lr in the code
 epochs: 200
+nn_version: 1
 
 # MPC
-horizon_length: 8
+horizon_length: 15
 terminal_cost_type: "nn" # "nn" or "heuristic"
-start: [2.0, 1.5]
-goal: [0.0, 1.0]
+start: [0.0, 0.0]
+goal: [1.5, 1.0]
 Q: [0.01, 0.001]
 R: [0.001, 0.001]
 W: 0.001

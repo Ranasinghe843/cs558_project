@@ -67,40 +67,42 @@ class MPCConfig:
             temp_state = self.motion_model(temp_state, v, omega)
             x, y, theta = temp_state
 
-            dist_to_goal = np.linalg.norm(temp_state[:2] - self.goal)
-            total_cost += self.Q[0] * dist_to_goal**2
+            if self.terminal_cost_type == "heuristic":
+                dist_to_goal = np.linalg.norm(temp_state[:2] - self.goal)
+                total_cost += self.Q[0] * dist_to_goal**2
+                
+                if dist_to_goal > 0.1:
+                    dx = self.goal[0] - x
+                    dy = self.goal[1] - y
+                    desired_yaw = np.arctan2(dy, dx)
+
+                    yaw_error = desired_yaw - theta
+                    yaw_error = np.arctan2(np.sin(yaw_error), np.cos(yaw_error))
+                
+                    total_cost += self.Q[1] * yaw_error**2 
             
-            if dist_to_goal > 0.1:
-                dx = self.goal[0] - x
-                dy = self.goal[1] - y
-                desired_yaw = np.arctan2(dy, dx)
+            elif self.terminal_cost_type == "nn":
+                total_cost += self.cost_to_go(temp_state)
 
-                yaw_error = desired_yaw - theta
-                yaw_error = np.arctan2(np.sin(yaw_error), np.cos(yaw_error))
-            
-                total_cost += self.Q[1] * yaw_error**2 
+            # for obs_id in self.obs_ids:
+            #     obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
+            #     obs_xy = np.array(obs_pos[:2])
+            #     diff = temp_state[:2] - obs_xy
+            #     dist_obs = np.linalg.norm(diff) - self.robot_radius - (0.35*np.sqrt(2))
 
-            for obs_id in self.obs_ids:
-                obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                obs_xy = np.array(obs_pos[:2])
-                diff = temp_state[:2] - obs_xy
-                dist_obs = np.linalg.norm(diff) - self.robot_radius - (0.35*np.sqrt(2))
+            #     HARD_MARGIN = self.robot_radius + 0.05 
 
-                HARD_MARGIN = self.robot_radius + 0.05 
-
-                for obs_id in self.obs_ids:
-                    obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                    dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius - (0.35*np.sqrt(2)) 
+            #     for obs_id in self.obs_ids:
+            #         obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
+            #         dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2])) - self.robot_radius - (0.35*np.sqrt(2)) 
                     
-                    if dist_obs < HARD_MARGIN:
-                        total_cost += self.W * (1.0 / (dist_obs + 1e-3)) 
+            #         if dist_obs < HARD_MARGIN:
+            #             total_cost += self.W * (1.0 / (dist_obs + 1e-3)) 
                         
             total_cost += (self.R[0] * v**2) + (self.R[1] * omega**2)
             
-        cost2go = self.cost_to_go(temp_state)
-        
         # print(f"stage: {total_cost}, terminal: {cost2go:.4f}")
-        total_cost += cost2go
+        # total_cost += cost2go
 
         return total_cost
 
@@ -124,7 +126,7 @@ def mpc(config):
     START = np.concatenate([np.array(config['start']), [0]])
     bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H # on robot commands (v, omega) for each step in horizon
 
-    env = SimulationEnv(render=True, start_pos_2d=config['start'])
+    env = SimulationEnv(render=True, start_pos_2d=config['start'], inflation_radius=0.0)
     pt_start = [START[0], START[1], 0.05]
     pt_goal  = [GOAL[0], GOAL[1], 0.05]
 
@@ -132,7 +134,7 @@ def mpc(config):
     p.addUserDebugPoints([pt_goal], pointColorsRGB=[[0, 1, 0]], pointSize=15.0)
 
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    weight_path = f"{config['nn_folder']}/nn{config['nn_version']}_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
     # weight_path = f"{config['nn_folder']}/cost2go_weights.pth"
     print("Loading model weights from:", weight_path)
     trained_model.load_state_dict(torch.load(weight_path))
