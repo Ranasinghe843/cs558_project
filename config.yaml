@@ -50,15 +50,19 @@ num_samples: 100000
 version: 1
 
 # Neural Network
-learning_rate: 100 # will be used as 1/lr in the code
-epochs: 200
-nn_version: 1
+learning_rate: 1000 # will be used as 1/lr in the code
+epochs: 100
+optimizer: "AdamW" # "SGD", "Adam", or "AdamW"
+dropout_rate: 0.0 # only used for nn_version 3
+weight_decay: 100 # only used for AdamW optimizer
+nn_version: 3
 
 # MPC
-horizon_length: 15
-terminal_cost_type: "nn" # "nn" or "heuristic"
+horizon_length: 8
+terminal_cost_type: "heuristic" # "nn" or "heuristic"
 start: [0.0, 0.0]
-goal: [1.5, 1.0]
-Q: [0.01, 0.001]
-R: [0.001, 0.001]
-W: 0.001
+goal: [-1.0, -1.5]
+Q: [0.1, 0.01]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+R: [0.001, 0.001] # weight for v, omega  
+W: 0.0001          # weight for obstacle cost
+T: 1.0            # weight for terminal cost

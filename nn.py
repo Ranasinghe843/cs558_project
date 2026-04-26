@@ -7,16 +7,16 @@ import argparse
 
 class NeuralNetwork(nn.Module):
     # NN : 1
-    def __init__(self, obsv_dim, cost_dim):
-        super(NeuralNetwork, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(obsv_dim, 64),
-            nn.ReLU(),        
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, cost_dim),
-            nn.Softplus(beta=5.0)
-        )
+    # def __init__(self, obsv_dim, cost_dim):
+        # super(NeuralNetwork, self).__init__()
+        # self.net = nn.Sequential(
+        #     nn.Linear(obsv_dim, 64),
+        #     nn.ReLU(),        
+        #     nn.Linear(64, 32),
+        #     nn.ReLU(),
+        #     nn.Linear(32, cost_dim),
+        #     nn.Softplus(beta=5.0)
+        # )
 
     # NN : 2
     # def __init__(self, obsv_dim, cost_dim):
@@ -32,19 +32,38 @@ class NeuralNetwork(nn.Module):
     #         nn.Softplus(beta=5.0)
     #     )
     
-    # def __init__(self, obsv_dim, cost_dim):
+    # # NN : 3 (with Dropout) 
+    # # BEST: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth
+    def __init__(self, obsv_dim, cost_dim, dr):
+        super(NeuralNetwork, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(obsv_dim, 256),
+            nn.ReLU(),   
+            nn.Dropout(p=dr),     
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(p=dr),   
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(p=dr),   
+            nn.Linear(64, cost_dim),
+            nn.Softplus(beta=5.0)
+        )
+
+    # NN : 4 
+    # def __init__(self, obsv_dim, cost_dim, dr):
     #     super(NeuralNetwork, self).__init__()
     #     self.net = nn.Sequential(
-    #         nn.Linear(obsv_dim, 512),
+    #         nn.Linear(obsv_dim, 128),
     #         nn.ReLU(),   
-    #         nn.Dropout(p=0.2),     
-    #         nn.Linear(512, 256),
+    #         nn.Dropout(p=dr),     
+    #         nn.Linear(128, 64),
     #         nn.ReLU(),
-    #         nn.Dropout(p=0.2),   
-    #         nn.Linear(256, 128),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(64, 32),
     #         nn.ReLU(),
-    #         nn.Dropout(p=0.2),   
-    #         nn.Linear(128, cost_dim),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(32, cost_dim),
     #         nn.Softplus(beta=5.0)
     #     )
 
