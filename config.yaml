@@ -49,7 +49,9 @@ nodes: 2000
 num_samples: 100000
 version: 1
 
-# Neural Network
+# Neural Network 
+# (BEST average abs error: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth (nn_version 3))
+# (BEST max error: nn8_dr0_AdamW10_epochs150_lr1000_dataset100000_1.pth (nn_version 3))
 learning_rate: 1000 # will be used as 1/lr in the code
 epochs: 100
 optimizer: "AdamW" # "SGD", "Adam", or "AdamW"

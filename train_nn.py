@@ -31,8 +31,9 @@ def train(config):
 
     dataset = torch.utils.data.TensorDataset(states, costs)
     loader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
-
+    
     model = NeuralNetwork(4, 1, dr=dr)
+    
     # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True)
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     if optimizer_choice == "AdamW":

@@ -19,21 +19,27 @@ class NeuralNetwork(nn.Module):
         # )
 
     # NN : 2
-    # def __init__(self, obsv_dim, cost_dim):
+    # def __init__(self, obsv_dim, cost_dim, dr):
     #     super(NeuralNetwork, self).__init__()
     #     self.net = nn.Sequential(
-    #         nn.Linear(obsv_dim, 512),
+    #         nn.Linear(obsv_dim, 128),
     #         nn.ReLU(),        
-    #         nn.Linear(512, 256),
+    #         nn.Dropout(p=dr),
+    #         nn.Linear(128, 64),
     #         nn.ReLU(),
-    #         nn.Linear(256, 128),
+    #         nn.Dropout(p=dr),
+    #         nn.Linear(64, 32),
     #         nn.ReLU(),
-    #         nn.Linear(128, cost_dim),
+    #         nn.Dropout(p=dr),
+    #         nn.Linear(32, 16),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),
+    #         nn.Linear(16, cost_dim),
     #         nn.Softplus(beta=5.0)
     #     )
     
-    # # NN : 3 (with Dropout) 
-    # # BEST: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth
+    # NN : 3 (with Dropout) 
+    # BEST: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth
     def __init__(self, obsv_dim, cost_dim, dr):
         super(NeuralNetwork, self).__init__()
         self.net = nn.Sequential(
@@ -61,6 +67,86 @@ class NeuralNetwork(nn.Module):
     #         nn.ReLU(),
     #         nn.Dropout(p=dr),   
     #         nn.Linear(64, 32),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(32, cost_dim),
+    #         nn.Softplus(beta=5.0)
+    #     )
+
+    # NN : 5
+    # def __init__(self, obsv_dim, cost_dim, dr):
+    #     super(NeuralNetwork, self).__init__()
+    #     self.net = nn.Sequential(
+    #         nn.Linear(obsv_dim, 256),
+    #         nn.ReLU(),   
+    #         nn.Dropout(p=dr),     
+    #         nn.Linear(256, 128),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(128, 64),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(64, 32),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(32, cost_dim),
+    #         nn.Softplus(beta=5.0)
+    #     )
+
+    # # NN : 6
+    # def __init__(self, obsv_dim, cost_dim, dr):
+    #     super(NeuralNetwork, self).__init__()
+    #     self.net = nn.Sequential(
+    #         nn.Linear(obsv_dim, 512),
+    #         nn.ReLU(),   
+    #         nn.Dropout(p=dr),     
+    #         nn.Linear(512, 256),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(256, 128),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(128, 64),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(64, 32),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(32, cost_dim),
+    #         nn.Softplus(beta=5.0)
+    #     )
+
+    # # NN : 7
+    # def __init__(self, obsv_dim, cost_dim, dr):
+    #     super(NeuralNetwork, self).__init__()
+    #     self.net = nn.Sequential(
+    #         nn.Linear(obsv_dim, 512),
+    #         nn.ReLU(),   
+    #         nn.Dropout(p=dr),     
+    #         nn.Linear(512, 256),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(256, 128),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(128, 64),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(64, cost_dim),
+    #         nn.Softplus(beta=5.0)
+    #     )
+
+    # NN : 8
+    # def __init__(self, obsv_dim, cost_dim, dr):
+    #     super(NeuralNetwork, self).__init__()
+    #     self.net = nn.Sequential(
+    #         nn.Linear(obsv_dim, 512),
+    #         nn.ReLU(),   
+    #         nn.Dropout(p=dr),     
+    #         nn.Linear(512, 128),
+    #         nn.ReLU(),
+    #         nn.Dropout(p=dr),   
+    #         nn.Linear(128, 32),
     #         nn.ReLU(),
     #         nn.Dropout(p=dr),   
     #         nn.Linear(32, cost_dim),

@@ -39,6 +39,7 @@ def test(config):
     print("-" * 50)
     avg_error = 0.0
     error_store = []
+    error_abs = 0.0
 
     for raw_test in totest:
         raw_input = torch.tensor((raw_test[0:4])).float()
@@ -50,6 +51,7 @@ def test(config):
         pred_val = prediction.item()
         error = 100.0 * np.abs(pred_val - actual)/(1e-3 + np.abs(actual))
         error_store.append(error)
+        error_abs += np.abs(pred_val - actual)
         # print(f" Error: {error:.4f}")
         avg_error += error
 
@@ -57,6 +59,7 @@ def test(config):
     print(f"Average Error: {avg_error:.4f} % over {len(totest)} samples")
     print(f"Max Error : {np.max(error_store):.4f} % over {len(totest)} samples")
     print(f"Standard Deviation of Error: {np.std(error_store):.4f} % over {len(totest)} samples")
+    print(f"Average Absolute Error: {error_abs / len(totest):.4f} over {len(totest)} samples")
 
 if __name__ == "__main__":
     with open('config.yaml', 'r') as file:
