@@ -99,7 +99,8 @@ class DatasetGenerator:
                 return idx
         return None
 
-    def run(self, num_samples=2000, output_file="cost_to_go_dataset.csv"):
+    def run(self, num_samples=2000):
+        output_file=f"cost_to_go_{self.config['world']}.csv"
         dataset = []
         obstructed_count = 0
         target_obstructed_ratio = 0.7  # 70% of data should be obstructed paths
@@ -157,5 +158,5 @@ class DatasetGenerator:
 
 if __name__ == "__main__":
     # Update these paths to match your files
-    gen = DatasetGenerator(config_path="config.yaml", prm_path="prm/prm_1000.pkl")
+    gen = DatasetGenerator(config_path="config.yaml", prm_path="prm/world2/prm_1528.pkl")
     gen.run(num_samples=100000)

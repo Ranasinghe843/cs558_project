@@ -91,8 +91,8 @@ def main():
     p.resetDebugVisualizerCamera(cameraDistance=5.0, cameraYaw=0, cameraPitch=-89.9, cameraTargetPosition=[0, 0, 0])
 
     prm = PRMStar(
-        bounds=config['bounds'], 
-        plane_id=env.plane_id, 
+        bounds=env.bounds, 
+        plane_id=env.plane_id,
         robot_id=env.robot_id
     )
 
@@ -109,7 +109,7 @@ def main():
             prm.visualize()
             
             total = len(prm.nodes)
-            with open(f"{folder}/prm_{total}.pkl", "wb") as f:
+            with open(f"{folder}/{config['world']}/prm_{total}.pkl", "wb") as f:
                 pickle.dump({"nodes": prm.nodes, "adj": prm.adj}, f)
             
             print(f"Iteration complete. Graph has {total} nodes.")

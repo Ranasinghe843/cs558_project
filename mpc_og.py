@@ -35,6 +35,30 @@ class MPCConfig:
             print("Using Heuristic for Terminal Cost")
             self.cost_to_go = self.heuristic_cost_to_go
 
+        # Initialize containers
+        pos_list = []
+        extents_list = []
+        
+        for obs_id in self.obs_ids:
+            # 1. Get Position (x, y)
+            pos, _ = p.getBasePositionAndOrientation(obs_id)
+            pos_list.append([pos[0], pos[1]])
+            
+            # 2. Get Geometry (Half-Extents)
+            # getCollisionShapeData returns a list of shapes; we take the first one [0]
+            # Index 3 is the 'half-extents' for boxes: [width/2, length/2, height/2]
+            shape_data = p.getCollisionShapeData(obs_id, -1)
+            if shape_data:
+                half_extents = shape_data[0][3] 
+                extents_list.append([half_extents[0], half_extents[1]])
+            else:
+                # Fallback for unexpected shapes
+                extents_list.append([0.1, 0.1]) 
+
+        # Convert to NumPy arrays for vectorized math
+        self.obs_positions = np.array(pos_list)      # Shape: (num_obs, 2)
+        self.obs_half_extents = np.array(extents_list) # Shape: (num_obs, 2)
+
     def get_robot_state(self):
         pos, ori = p.getBasePositionAndOrientation(self.robot_id)
         euler = p.getEulerFromQuaternion(ori)
@@ -93,29 +117,20 @@ class MPCConfig:
             #     if dist_obs < HARD_MARGIN:
             #         total_cost += self.W * (1.0 / (dist_obs + 1e-3))
 
-            for obs_id in self.obs_ids:
-                obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                shape_data = p.getCollisionShapeData(obs_id, -1)[0]
-                half_extents = shape_data[3]
+            SAFETY_MARGIN = 0.1
+            delta = np.abs(temp_state[:2] - self.obs_positions) - self.obs_half_extents
                 
-                dx = abs(temp_state[0] - obs_pos[0]) - half_extents[0]
-                dy = abs(temp_state[1] - obs_pos[1]) - half_extents[1]
+            dist_to_edges = np.linalg.norm(np.maximum(delta, 0), axis=1)
 
-                dist_to_edge = np.sqrt(max(dx, 0)**2 + max(dy, 0)**2)
+            true_clearances = (dist_to_edges - self.robot_radius)**2
 
-                true_clearance = dist_to_edge - self.robot_radius
-
-                SAFETY_MARGIN = 0.1
-                if true_clearance < SAFETY_MARGIN:
-                    print(shape_data)
-                    total_cost += self.W * (1.0 / (max(true_clearance, 1e-3)))
+            mask = true_clearances < SAFETY_MARGIN
+            if np.any(mask):
+                total_cost += np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
                         
             total_cost += (self.R[0] * v**2) + (self.R[1] * omega**2)
 
-        if self.terminal_cost_type == "heuristic":
-            total_cost += self.T * self.cost_to_go(temp_state)
-        elif self.terminal_cost_type == "nn":
-            total_cost += self.T * self.cost_to_go(temp_state)
+        total_cost += self.T * (self.cost_to_go(temp_state)**2)
         return total_cost
 
 

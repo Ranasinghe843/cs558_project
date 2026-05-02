@@ -21,7 +21,7 @@ class SimulationEnv:
         with open(CONFIG_FILE, 'r') as file:
             self.config = yaml.safe_load(file)
         
-        self.bounds = self.config['bounds']
+        self.bounds = self.config[self.config['world']]['bounds']
 
         self.inflation_radius = inflation_radius
 
@@ -31,12 +31,14 @@ class SimulationEnv:
 
     def _setup_obstacles(self):
         obs_ids = []
-        for _, values in self.config['obstacles'].items():
-            obs_ids.append(self.create_inflated_box(values[0:2] + [values[2] / 2], values[2] / 2))
+        for values in self.config[self.config['world']]['obstacles']:
+            pos = [values[0], values[1], 0.25]
+            obs_ids.append(self.create_inflated_box(pos, values[2], values[3]))
         return obs_ids
 
-    def create_inflated_box(self, pos, half_extent):
-        base_half_extents = [half_extent, half_extent, half_extent]
+    def create_inflated_box(self, pos, hx, hy):
+        base_half_extents = [hx, hy, 0.25]
+        
         inflated_half_extents = [
             base_half_extents[0] + self.inflation_radius,
             base_half_extents[1] + self.inflation_radius,
@@ -71,7 +73,7 @@ if __name__ == '__main__':
     with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
 
-    env = SimulationEnv(render=True, start_pos_2d=[0,0])
+    env = SimulationEnv(render=True, start_pos_2d=[0.2,0.2])
 
     def apply_wheel_velocities(left_v, right_v):
         p.setJointMotorControl2(env.robot_id, 1, p.VELOCITY_CONTROL, targetVelocity=left_v)

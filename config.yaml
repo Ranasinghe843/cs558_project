@@ -4,45 +4,42 @@ nn_folder: "models/data_PRMstar"
 prm_folder: "prm"
 
 # Environment
-bounds: [-2.0, 2.0, -2.0, 2.0]
+# Obstacle Format: [x, y, half_width_x, half_length_y]
+world1:
+  bounds: [-2.0, 2.0, -2.0, 2.0]
+  obstacles: [
+    [-0.5, -0.5, 0.3, 0.3],
+    [-1.2, 1.2, 0.15, 0.15],
+    [0.8, 1.0, 0.15, 0.15],
+    [0.4, -1.1, 0.15, 0.15],
+    [0.9, 0.1, 0.15, 0.15],
+    [-1.5, -1.0, 0.1, 0.1],
+    [1.2, -0.6, 0.1, 0.1],
+    [-0.9, 0.3, 0.075, 0.075],
+    [0.0, 0.8, 0.075, 0.075]
+    ]
 
-obstacles:
-      box1:
-        - -0.5
-        - -0.5
-        - 0.6
-      box2:
-        - -1.2
-        - 1.2
-        - 0.3
-      box3:
-        - 0.8
-        - 1.0
-        - 0.3
-      box4:
-        - 0.4
-        - -1.1
-        - 0.3
-      box5:
-        - 0.9
-        - 0.1
-        - 0.3
-      box6:
-        - -1.5
-        - -1.0
-        - 0.2
-      box7:
-        - 1.2
-        - -0.6
-        - 0.2
-      box8:
-        - -0.9
-        - 0.3
-        - 0.15
-      box9:
-        - 0.0
-        - 0.8
-        - 0.15
+world2:
+  bounds: [-2.0, 2.0, -2.5, 2.0]
+  obstacles: [
+    # Horizontal Walls
+    [-0.5, 1.4, 0.5, 0.05],   
+    [-0.7, 0.6, 0.7, 0.05],   
+    [-0.7, -0.6, 0.7, 0.05],  
+    [-0.8, -1.8, 0.6, 0.05],  
+    [0.55, -0.2, 0.55, 0.05], 
+    [0.35, -1.2, 0.35, 0.05], 
+    [0.9, 1.0, 0.2, 0.05],    
+    
+    # Vertical Walls
+    [0.0, 0.4, 0.05, 1.0],    
+    [-1.0, 0.6, 0.05, 0.4],   
+    [-0.7, -1.2, 0.05, 0.6],  
+    [1.1, 0.4, 0.05, 0.6],    
+    [0.7, -1.0, 0.05, 0.8]    
+  ]
+
+world: "world2"
 
 # PRM
 nodes: 2000
@@ -60,11 +57,11 @@ weight_decay: 100 # only used for AdamW optimizer
 nn_version: 3
 
 # MPC
-horizon_length: 8
+horizon_length: 15
 terminal_cost_type: "heuristic" # "nn" or "heuristic"
 start: [0.0, 0.0]
 goal: [-1.0, -1.5]
-Q: [0.1, 0.01]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+Q: [0.001, 0.01]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
 R: [0.001, 0.001] # weight for v, omega  
-W: 0.001          # weight for obstacle cost
-T: 1.0            # weight for terminal cost
+W: 100          # weight for obstacle cost
+T: 0.001            # weight for terminal cost

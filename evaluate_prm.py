@@ -15,7 +15,7 @@ class PRMOptimalityEvaluator:
         
         # Use DIRECT mode for speed
         self.env = SimulationEnv(render=False)
-        self.bounds = self.config['bounds']
+        self.bounds = self.env.bounds
         self.inflation = self.env.inflation_radius
         
         print("Building Visibility Graph Oracle...")
@@ -29,10 +29,19 @@ class PRMOptimalityEvaluator:
 
     def _build_static_visibility_graph(self):
         vertices = []
-        for name, obs in self.config['obstacles'].items():
-            x, y, h = obs[0], obs[1], obs[2]/2.0
-            m = h + self.inflation
-            vertices.extend([[x-m, y-m], [x-m, y+m], [x+m, y-m], [x+m, y+m]])
+        
+        for obs in self.env.config[ self.env.config['world']]['obstacles']:
+            x, y, hx, hy = obs
+            
+            mx = hx + self.inflation
+            my = hy + self.inflation
+            
+            vertices.extend([
+                [x - mx, y - my],
+                [x - mx, y + my],
+                [x + mx, y - my],
+                [x + mx, y + my]
+            ])
 
         adj = {i: [] for i in range(len(vertices))}
         for i in range(len(vertices)):
@@ -40,6 +49,7 @@ class PRMOptimalityEvaluator:
                 if self._is_collision_free(vertices[i], vertices[j]):
                     adj[i].append(j)
                     adj[j].append(i)
+                    
         return vertices, adj
 
     def get_oracle_dist(self, start, goal):
@@ -109,8 +119,8 @@ class PRMOptimalityEvaluator:
                 return pt
 
     def evaluate(self, num_queries=1000):
-        prm_folder = self.config['prm_folder']
-        files = sorted([f for f in os.listdir(prm_folder) if f.endswith('.pkl')],
+        prm_folder = self.config['prm_folder'] + '/' + self.config['world']
+        files = sorted([f for f in os.listdir(prm_folder) if f.endswith(".pkl")],
                        key=lambda x: int(''.join(filter(str.isdigit, x)) or 0))
 
         print(f"\n--- Benchmark: {num_queries} Samples (Error Thresh: 10%) ---")
@@ -133,7 +143,7 @@ class PRMOptimalityEvaluator:
                 if l_true == float('inf') or l_true < 0.2: continue 
 
                 dists = sorted(enumerate(prm_nodes), key=lambda x: math.dist(start, x[1]))
-                s_idx = next((i for i, pos in dists[:15] if self._is_collision_free(start, pos)), None)
+                s_idx = next((i for i, pos in dists[:50] if self._is_collision_free(start, pos)), None)
                 
                 dists_g = sorted(enumerate(prm_nodes), key=lambda x: math.dist(goal, x[1]))
                 g_idx = next((i for i, pos in dists_g[:15] if self._is_collision_free(goal, pos)), None)
