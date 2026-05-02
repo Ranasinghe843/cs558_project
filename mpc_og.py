@@ -82,20 +82,33 @@ class MPCConfig:
             
             #     total_cost += self.Q[2] * yaw_error**2 
 
+            # HARD_MARGIN = self.robot_radius + 0.05 
+
+            # for obs_id in self.obs_ids:
+            #     obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
+            #     obs_xy = np.array(obs_pos[:2])
+                
+            #     dist_obs = np.linalg.norm(temp_state[:2] - obs_xy)
+                
+            #     if dist_obs < HARD_MARGIN:
+            #         total_cost += self.W * (1.0 / (dist_obs + 1e-3))
+
             for obs_id in self.obs_ids:
                 obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                obs_xy = np.array(obs_pos[:2])
-                diff = temp_state[:2] - obs_xy
-                dist_obs = np.linalg.norm(diff) - self.robot_radius - (0.35*np.sqrt(2))
+                shape_data = p.getCollisionShapeData(obs_id, -1)[0]
+                half_extents = shape_data[3]
+                
+                dx = abs(temp_state[0] - obs_pos[0]) - half_extents[0]
+                dy = abs(temp_state[1] - obs_pos[1]) - half_extents[1]
 
-                HARD_MARGIN = self.robot_radius + 0.05 
+                dist_to_edge = np.sqrt(max(dx, 0)**2 + max(dy, 0)**2)
 
-                for obs_id in self.obs_ids:
-                    obs_pos, _ = p.getBasePositionAndOrientation(obs_id)
-                    dist_obs = np.linalg.norm(temp_state[:2] - np.array(obs_pos[:2]))
-                    
-                    if dist_obs < HARD_MARGIN:
-                        total_cost += self.W * (1.0 / (dist_obs + 1e-3)) 
+                true_clearance = dist_to_edge - self.robot_radius
+
+                SAFETY_MARGIN = 0.1
+                if true_clearance < SAFETY_MARGIN:
+                    print(shape_data)
+                    total_cost += self.W * (1.0 / (max(true_clearance, 1e-3)))
                         
             total_cost += (self.R[0] * v**2) + (self.R[1] * omega**2)
 
@@ -175,7 +188,7 @@ def mpc(config):
             res = minimize(
                 MPC.objective_function, 
                 u_guess, 
-                method='SLSQP', 
+                method='SLSQP',
                 bounds=bounds
             )
             

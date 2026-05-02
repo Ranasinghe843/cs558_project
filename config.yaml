@@ -66,5 +66,5 @@ start: [0.0, 0.0]
 goal: [-1.0, -1.5]
 Q: [0.1, 0.01]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
 R: [0.001, 0.001] # weight for v, omega  
-W: 0.0001          # weight for obstacle cost
+W: 0.001          # weight for obstacle cost
 T: 1.0            # weight for terminal cost
