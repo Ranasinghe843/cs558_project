@@ -213,7 +213,7 @@ class NeuralNetwork(nn.Module):
     #         nn.Softplus(beta=5.0)
     #     )
 
-    # # # NN : 11 (same # of layers as NN 9 but wider layers)
+    # NN : 12 (same # of layers as NN 9 but wider layers)
     # def __init__(self, obsv_dim, cost_dim, dr):
     #     super(NeuralNetwork, self).__init__()
     #     self.net = nn.Sequential(

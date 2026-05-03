@@ -92,8 +92,14 @@ class MPCConfig:
             temp_state = self.motion_model(temp_state, v, omega)
             x, y, theta = temp_state
 
+            # goal cost
             dist_to_goal = np.linalg.norm(temp_state[:2] - self.goal)
-            total_cost += self.Q[0] * dist_to_goal**2
+            goal_cost = self.Q[0] * dist_to_goal**2
+            total_cost += goal_cost
+
+            # control cost
+            control_cost = (self.R[0] * v**2) + (self.R[1] * omega**2)
+            total_cost += control_cost
             
             # UNCOMMENT TO ACCOUNT FOR YAW ERROR IN COST
             # if dist_to_goal > 0.1:
@@ -117,6 +123,7 @@ class MPCConfig:
             #     if dist_obs < HARD_MARGIN:
             #         total_cost += self.W * (1.0 / (dist_obs + 1e-3))
 
+            # obstacle cost
             SAFETY_MARGIN = 0.1
             delta = np.abs(temp_state[:2] - self.obs_positions) - self.obs_half_extents
                 
@@ -126,11 +133,15 @@ class MPCConfig:
 
             mask = true_clearances < SAFETY_MARGIN
             if np.any(mask):
-                total_cost += np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
-                        
-            total_cost += (self.R[0] * v**2) + (self.R[1] * omega**2)
+                obs_cost = np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
+                total_cost += obs_cost
 
-        total_cost += self.T * (self.cost_to_go(temp_state)**2)
+        # remaining cost to go from final predicted state to goal
+        remaining_cost = self.T * (self.cost_to_go(temp_state)**2)
+        total_cost += remaining_cost
+
+        print(f"Goal Cost: {goal_cost:.4f}, Control Cost: {control_cost:.4f}, Obstacle Cost: {obs_cost:.4f}, Remaining Cost: {remaining_cost:.4f}")
+
         return total_cost
 
 
