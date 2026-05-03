@@ -2,6 +2,7 @@
 data_folder: "data/data_PRMstar"
 nn_folder: "models/data_PRMstar"
 prm_folder: "prm"
+world: "world2"
 
 # Environment
 # Obstacle Format: [x, y, half_width_x, half_length_y]
@@ -39,8 +40,6 @@ world2:
     [0.7, -1.0, 0.05, 0.8]    
   ]
 
-world: "world2"
-
 # PRM
 nodes: 2000
 num_samples: 100000
@@ -50,11 +49,11 @@ version: 1
 # (BEST average abs error: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth (nn_version 3))
 # (BEST max error: nn8_dr0_AdamW10_epochs150_lr1000_dataset100000_1.pth (nn_version 3))
 learning_rate: 1000 # will be used as 1/lr in the code
-epochs: 100
+epochs: 200
 optimizer: "AdamW" # "SGD", "Adam", or "AdamW"
 dropout_rate: 0.0 # only used for nn_version 3
 weight_decay: 100 # only used for AdamW optimizer
-nn_version: 3
+nn_version: 9
 
 # MPC
 horizon_length: 15

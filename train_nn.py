@@ -10,9 +10,10 @@ import yaml
     
 def train(config):
 
+    world = config['world']
     num_samples = config['num_samples']
     data_version = config['version']
-    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
+    data_path = f"{config['data_folder']}/{world}_cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
     lr = 1/config['learning_rate']
     dr = config['dropout_rate']
@@ -56,21 +57,22 @@ def train(config):
             optimizer.step()
             epoch_loss += loss.item()
 
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             avg_loss = epoch_loss / len(loader)
             print(f'Epoch {epoch}, Avg Loss: {avg_loss:.6f}')
     
     # torch.save(model.state_dict(), f"{config['nn_folder']}/nn_{round(dr*10)}_{optimizer_choice}_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth")
     # torch.save(model.state_dict(), f"{config['nn_folder']}/data_PRMstar/nn_{epochs}_{config['learning_rate']}.pth")
-    if optimizer_choice == "AdamW":
-        if config['nn_version'] != 3:
-            torch.save(model.state_dict(), f"{config['nn_folder']}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-        else:
-            torch.save(model.state_dict(), f"{config['nn_folder']}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-    elif optimizer_choice == "Adam":
-        torch.save(model.state_dict(), f"{config['nn_folder']}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-    elif optimizer_choice == "SGD":
-        torch.save(model.state_dict(), f"{config['nn_folder']}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+        
+            if optimizer_choice == "AdamW":
+                if config['nn_version'] != 3:
+                    torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+                else:
+                    torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            elif optimizer_choice == "Adam":
+                torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            elif optimizer_choice == "SGD":
+                torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
 
 if __name__ == '__main__':
 

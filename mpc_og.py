@@ -143,6 +143,7 @@ def apply_control(robot_id, v, omega):
     p.setJointMotorControl2(robot_id, 2, p.VELOCITY_CONTROL, targetVelocity=right_v)
 
 def mpc(config):
+    world = config['world']
     num_samples = config['num_samples']
     data_version = config['version']
     epochs = config['epochs']
@@ -164,11 +165,11 @@ def mpc(config):
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1, dr=dr)
     if optimizer_choice == "AdamW":
         if config['nn_version'] != 3:
-            weight_path = f"{config['nn_folder']}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+            weight_path = f"{config['nn_folder']}/{world}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
         else:
-            weight_path = f"{config['nn_folder']}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+            weight_path = f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
     else:
-        weight_path = f"{config['nn_folder']}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+        weight_path = f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
     print("Loading model weights from:", weight_path)
     trained_model.load_state_dict(torch.load(weight_path))
     trained_model.eval()
