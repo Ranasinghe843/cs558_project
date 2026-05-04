@@ -56,11 +56,11 @@ weight_decay: 100 # only used for AdamW optimizer
 nn_version: 9
 
 # MPC
-horizon_length: 15
+horizon_length: 8
 terminal_cost_type: "heuristic" # "nn" or "heuristic"
-start: [0.0, 0.0]
+start: [-1.7, -0.5]
 goal: [-1.0, -1.5]
-Q: [0.001, 0.01]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
-R: [0.001, 0.001] # weight for v, omega  
-W: 100          # weight for obstacle cost
-T: 0.001            # weight for terminal cost
+Q: [1.0, 10.0]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+R: [0.1, 0.005] # weight for v, omega  
+W: 1000.0        # weight for obstacle cost
+T: 10.0            # weight for terminal cost

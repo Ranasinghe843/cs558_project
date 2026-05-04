@@ -135,6 +135,8 @@ class MPCConfig:
             if np.any(mask):
                 obs_cost = np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
                 total_cost += obs_cost
+            else:
+                obs_cost = 0
 
         # remaining cost to go from final predicted state to goal
         remaining_cost = self.T * (self.cost_to_go(temp_state)**2)
@@ -186,11 +188,11 @@ def mpc(config):
     trained_model.eval()
     
     MPC = MPCConfig(
-        robot_id=env.robot_id, 
-        obs_ids=env.obstacles, 
-        terminal_model=trained_model, 
+        robot_id=env.robot_id,
+        obs_ids=env.obstacles,
+        terminal_model=trained_model,
         terminal_cost_type=config['terminal_cost_type'],
-        horizon_length=H, 
+        horizon_length=H,
         goal=GOAL,
         Q=config['Q'],
         R=config['R'],
@@ -216,18 +218,26 @@ def mpc(config):
                 MPC.objective_function, 
                 u_guess, 
                 method='SLSQP',
-                bounds=bounds
+                bounds=bounds,
+                options={'ftol': 1e-3, 'maxiter': 20}
             )
             
             best_v, best_omega = res.x[0], res.x[1]
             # print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
             
-            apply_control(env.robot_id, best_v, best_omega)
+            #apply_control(env.robot_id, best_v, best_omega)
             
-            u_guess = res.x 
+            #u_guess = res.x
+            u_guess = np.concatenate([res.x[2:], res.x[-2:]])
             
-            p.stepSimulation()
-            time.sleep(1./240.)
+            #p.stepSimulation()
+            #time.sleep(1./240.)
+
+            steps_per_mpc = int(MPC.dt * 240)
+            for _ in range(steps_per_mpc):
+                apply_control(env.robot_id, best_v, best_omega)
+                p.stepSimulation()
+                time.sleep(1./240.)
 
     except KeyboardInterrupt:
         p.disconnect()
