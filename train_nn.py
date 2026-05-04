@@ -7,6 +7,7 @@ import pickle
 import argparse
 from nn import NeuralNetwork
 import yaml
+import matplotlib.pyplot as plt
     
 def train(config):
 
@@ -45,6 +46,8 @@ def train(config):
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True)
     criterion = nn.MSELoss()
 
+    avg_loss_list = []
+
     for epoch in range(epochs):
         epoch_loss = 0.0
         model.train()
@@ -59,6 +62,7 @@ def train(config):
 
         if epoch % 50 == 0:
             avg_loss = epoch_loss / len(loader)
+            avg_loss_list.append(avg_loss)
             print(f'Epoch {epoch}, Avg Loss: {avg_loss:.6f}')
     
     # torch.save(model.state_dict(), f"{config['nn_folder']}/nn_{round(dr*10)}_{optimizer_choice}_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth")
@@ -73,6 +77,12 @@ def train(config):
                 torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
             elif optimizer_choice == "SGD":
                 torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+
+    plt.figure()
+    plt.plot(np.arange(0, epochs, 50), avg_loss_list)
+    plt.xlabel('Epoch')
+    plt.ylabel('Average Training Loss')
+    plt.show()
 
 if __name__ == '__main__':
 
