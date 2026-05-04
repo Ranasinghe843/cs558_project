@@ -102,7 +102,7 @@ class MPCConfig:
             total_cost += control_cost
             
             # UNCOMMENT TO ACCOUNT FOR YAW ERROR IN COST
-            # if dist_to_goal > 0.1:
+            # if dist_to_goal > 0.02:
             #     dx = self.goal[0] - x
             #     dy = self.goal[1] - y
             #     desired_yaw = np.arctan2(dy, dx)
@@ -110,7 +110,7 @@ class MPCConfig:
             #     yaw_error = desired_yaw - theta
             #     yaw_error = np.arctan2(np.sin(yaw_error), np.cos(yaw_error))
             
-            #     total_cost += self.Q[2] * yaw_error**2 
+            #     total_cost += self.Q[1] * yaw_error**2 
 
             # HARD_MARGIN = self.robot_radius + 0.05 
 
@@ -124,7 +124,7 @@ class MPCConfig:
             #         total_cost += self.W * (1.0 / (dist_obs + 1e-3))
 
             # obstacle cost
-            SAFETY_MARGIN = 0.1
+            SAFETY_MARGIN = 0.05
             delta = np.abs(temp_state[:2] - self.obs_positions) - self.obs_half_extents
                 
             dist_to_edges = np.linalg.norm(np.maximum(delta, 0), axis=1)
@@ -134,6 +134,7 @@ class MPCConfig:
             mask = true_clearances < SAFETY_MARGIN
             if np.any(mask):
                 obs_cost = np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
+                # obs_cost = 0
                 total_cost += obs_cost
             else:
                 obs_cost = 0
@@ -174,6 +175,8 @@ def mpc(config):
 
     p.addUserDebugPoints([pt_start], pointColorsRGB=[[1, 0, 0]], pointSize=15.0)
     p.addUserDebugPoints([pt_goal], pointColorsRGB=[[0, 1, 0]], pointSize=15.0)
+    p.resetDebugVisualizerCamera(cameraDistance=5.0, cameraYaw=0, cameraPitch=-89.9, cameraTargetPosition=[0, 0, 0])
+
 
     trained_model = NeuralNetwork(obsv_dim=4, cost_dim=1, dr=dr)
     if optimizer_choice == "AdamW":
