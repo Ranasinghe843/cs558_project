@@ -133,8 +133,8 @@ class MPCConfig:
 
             mask = true_clearances < SAFETY_MARGIN
             if np.any(mask):
-                obs_cost = np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
-                # obs_cost = 0
+                # obs_cost = np.sum(self.W * (1.0 / (true_clearances[mask] + 1e-3)))
+                obs_cost = 0
                 total_cost += obs_cost
             else:
                 obs_cost = 0
@@ -203,6 +203,7 @@ def mpc(config):
         T=config['T']
     )
     u_guess = np.zeros(H * 2) 
+    u_guess[0::2] = 0.01
 
     print("MPC Started. Heading to:", GOAL)
 
@@ -222,16 +223,18 @@ def mpc(config):
                 u_guess, 
                 method='SLSQP',
                 bounds=bounds,
-                options={'ftol': 1e-3, 'maxiter': 20}
+                # options={'ftol': 1e-3, 'maxiter': 20}
             )
+
+            
             
             best_v, best_omega = res.x[0], res.x[1]
-            # print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
-            
+            print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
+            # input("Press Enter to apply the optimal control...")
             #apply_control(env.robot_id, best_v, best_omega)
             
-            #u_guess = res.x
-            u_guess = np.concatenate([res.x[2:], res.x[-2:]])
+            u_guess = res.x
+            # u_guess = np.concatenate([res.x[2:], res.x[-2:]])
             
             #p.stepSimulation()
             #time.sleep(1./240.)

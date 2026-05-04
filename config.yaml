@@ -1,7 +1,7 @@
 # folders and paths
 data_folder: "data/data_PRMstar"
 nn_folder: "models/data_PRMstar"
-prm_folder: "prm"
+prm_folder: "prm/trial"
 world: "world2"
 
 # Environment
@@ -56,11 +56,11 @@ weight_decay: 100 # only used for AdamW optimizer
 nn_version: 9
 
 # MPC
-horizon_length: 25
-terminal_cost_type: "heuristic" # "nn" or "heuristic"
+horizon_length: 8
+terminal_cost_type: "nn" # "nn" or "heuristic"
 start: [-1.2, -0.1]
 goal: [-1.2, -1.3]
-Q: [0.5, 0.001]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+Q: [0.3, 0.001]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
 R: [0.01, 0.005] # weight for v, omega  
 W: 0.0004        # weight for obstacle cost
 T: 0.5            # weight for terminal cost
