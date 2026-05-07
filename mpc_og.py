@@ -74,8 +74,9 @@ def plot_mpc_landscape_with_horizon(mpc, res=None, resolution=0.1):
     plt.show()
 
 class MPCConfig:
-    def __init__(self, robot_id, obs_list, terminal_model, terminal_cost_type, horizon_length, goal, Q, R, W, T):
+    def __init__(self, robot_id, obs_list, terminal_model, terminal_cost_type, horizon_length, start, goal, Q, R, W, T):
         self.horizon_length = horizon_length
+        self.start = np.array(start)
         self.goal = np.array(goal)
         self.robot_id = robot_id
         self.robot_radius = 0.105
@@ -89,6 +90,7 @@ class MPCConfig:
         self.R = np.array(R)
         self.W = np.array(W)
         self.T = np.array(T)
+        self.norm_dist = np.linalg.norm(self.start - self.goal)
 
         # 2. Assign the FUNCTION REFERENCE (No parentheses here!)
         if self.terminal_cost_type == "nn":
@@ -126,7 +128,7 @@ class MPCConfig:
         total_cost = 0
         temp_state = self.state
 
-        HARD_MARGIN = self.robot_radius + 0.15
+        HARD_MARGIN = self.robot_radius + 0.10
         
         for i in range(self.horizon_length):
             v, omega = u[i]
@@ -135,7 +137,7 @@ class MPCConfig:
 
             # goal cost
             dist_to_goal = np.linalg.norm(temp_state[:2] - self.goal)
-            goal_cost = self.Q[0] * dist_to_goal**2
+            goal_cost = (self.Q[0] /self.norm_dist) * dist_to_goal**2
             total_cost += goal_cost
 
             # control cost
@@ -167,10 +169,11 @@ class MPCConfig:
                 obs_cost = 0
 
         # remaining cost to go from final predicted state to goal
-        remaining_cost = self.T * (self.cost_to_go(temp_state)**2)
+        remaining_cost = (self.T/self.norm_dist) * ((self.cost_to_go(temp_state))**2)
+        # print(f"Stage cost : {total_cost:.4f} | Remaining cost: {remaining_cost:.4f}")
         total_cost += remaining_cost
 
-        print(f"Goal Cost: {goal_cost:.4f}, Control Cost: {control_cost:.4f}, Obstacle Cost: {obs_cost:.4f}, Remaining Cost: {remaining_cost:.4f}")
+        # print(f"Goal Cost: {goal_cost:.4f}, Control Cost: {control_cost:.4f}, Obstacle Cost: {obs_cost:.4f}, Remaining Cost: {remaining_cost:.4f}")
 
         return total_cost
 
@@ -193,7 +196,7 @@ def mpc(config):
 
     H = config['horizon_length']             
     GOAL = np.array(config['goal'])
-    START = np.concatenate([np.array(config['start']), [0]])
+    START =np.array(config['start'])
     bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H # on robot commands (v, omega) for each step in horizon
 
     env = SimulationEnv(render=True, start_pos_2d=config['start'], inflation_radius=0.0)
@@ -224,6 +227,7 @@ def mpc(config):
         terminal_model=trained_model,
         terminal_cost_type=config['terminal_cost_type'],
         horizon_length=H,
+        start=np.array(config['start']),
         goal=GOAL,
         Q=config['Q'],
         R=config['R'],
@@ -231,7 +235,7 @@ def mpc(config):
         T=config['T']
     )
     u_guess = np.zeros(H * 2) 
-    u_guess[0::2] = 0.01
+    # u_guess[0::2] = 0.01
 
     print("MPC Started. Heading to:", GOAL)
 
@@ -256,11 +260,14 @@ def mpc(config):
             
             best_v, best_omega = res.x[0], res.x[1]
 
-            if best_v == 0.0:
-                plot_mpc_landscape_with_horizon(MPC, res)
-                input("Keep Going?")
+            plot_mpc_landscape_with_horizon(MPC, res)
+            input("Press Enter to continue...")
+
+            # if best_v == 0.0:
+            #     plot_mpc_landscape_with_horizon(MPC, res)
+            #     input("Keep Going?")
                 
-            print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
+            # print(f"Optimal Command: v={best_v:.3f}, omega={best_omega:.3f} | Cost: {res.fun:.4f}")
             # input("Press Enter to apply the optimal control...")
             #apply_control(env.robot_id, best_v, best_omega)
             
