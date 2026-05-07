@@ -57,7 +57,7 @@ nn_version: 9
 
 # MPC
 horizon_length: 10
-terminal_cost_type: "heuristic" # "nn" or "heuristic"
+terminal_cost_type: "nn" # "nn" or "heuristic"
 # start: [-1.2, -0.1]
 # start: [-0.65, 0.1]
 # start: [1.95, 1.95]

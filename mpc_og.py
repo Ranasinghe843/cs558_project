@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 import torch
 import pickle
 import torch.nn as nn
@@ -11,6 +11,7 @@ from env_setup import SimulationEnv
 from nn import NeuralNetwork
 import yaml
 from shlex import split
+import csv
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -236,17 +237,20 @@ def mpc(config):
     )
     u_guess = np.zeros(H * 2) 
     # u_guess[0::2] = 0.01
+    store_state = []
 
     print("MPC Started. Heading to:", GOAL)
 
     try:
         while True:
             state = MPC.get_robot_state()
+            store_state.append(state[0:2])
             
             # Check if goal reached
             if np.linalg.norm(state[:2] - GOAL) < 0.1:
                 print("Goal Reached!")
                 apply_control(env.robot_id , 0, 0) # Stop the robot
+                # print(len(store_state))
                 break
 
             # Solve MPC Optimization
@@ -255,13 +259,13 @@ def mpc(config):
                 u_guess, 
                 method='SLSQP',
                 bounds=bounds,
-                # options={'ftol': 1e-3, 'maxiter': 20}
+                # options={'ftol': 1e-5}
             )
             
             best_v, best_omega = res.x[0], res.x[1]
 
-            plot_mpc_landscape_with_horizon(MPC, res)
-            input("Press Enter to continue...")
+            # plot_mpc_landscape_with_horizon(MPC, res)
+            # input("Press Enter to continue...")
 
             # if best_v == 0.0:
             #     plot_mpc_landscape_with_horizon(MPC, res)
@@ -282,6 +286,13 @@ def mpc(config):
                 apply_control(env.robot_id, best_v, best_omega)
                 p.stepSimulation()
                 time.sleep(1./240.)
+
+        if config['terminal_cost_type'] == "nn":
+            fname = "data/mpc_path/data_nn_1.csv"
+        elif config['terminal_cost_type'] == "heuristic":
+            fname = "data/mpc_path/data_heuristic_1.csv"
+
+        np.savetxt(fname, store_state, delimiter=',', comments='')
 
     except KeyboardInterrupt:
         p.disconnect()
