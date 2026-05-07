@@ -24,13 +24,13 @@ world2:
   bounds: [-2.0, 2.0, -2.5, 2.0]
   obstacles: [
     # Horizontal Walls
-    [-0.5, 1.4, 0.5, 0.05],   
-    [-0.7, 0.6, 0.7, 0.05],   
-    [-0.7, -0.6, 0.7, 0.05],  
-    [-0.8, -1.8, 0.6, 0.05],  
-    [0.55, -0.2, 0.55, 0.05], 
-    [0.35, -1.2, 0.35, 0.05], 
-    [0.9, 1.0, 0.2, 0.05],    
+    [-0.5, 1.4, 0.5, 0.05],
+    [-0.7, 0.6, 0.7, 0.05],
+    [-0.7, -0.6, 0.7, 0.05],
+    [-0.8, -1.8, 0.6, 0.05],
+    [0.55, -0.2, 0.55, 0.05],
+    [0.35, -1.2, 0.35, 0.05],
+    [0.9, 1.0, 0.2, 0.05],
     
     # Vertical Walls
     [0.0, 0.4, 0.05, 1.0],    
@@ -56,11 +56,13 @@ weight_decay: 100 # only used for AdamW optimizer
 nn_version: 9
 
 # MPC
-horizon_length: 8
+horizon_length: 10
 terminal_cost_type: "nn" # "nn" or "heuristic"
 start: [-1.2, -0.1]
+# start: [-0.7, 0.1]
+# start: [1.95, 1.95]
 goal: [-1.2, -1.3]
-Q: [0.3, 0.001]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
-R: [0.01, 0.005] # weight for v, omega  
-W: 0.0004        # weight for obstacle cost
-T: 0.5            # weight for terminal cost
+Q: [1.0, 0.1]  # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+R: [0.01, 0.01] # weight for v, omega  
+W: 10.0        # weight for obstacle cost
+T: 10.0            # weight for terminal cost
