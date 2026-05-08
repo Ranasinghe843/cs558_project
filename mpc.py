@@ -131,7 +131,7 @@ class MPCConfig:
         total_cost = 0
         temp_state = self.state
 
-        HARD_MARGIN = self.robot_radius + 0.05
+        HARD_MARGIN = 0.15 # self.robot_radius + 0.05
         
         # total stage over predicted horizon
         for i in range(self.horizon_length):
@@ -153,8 +153,8 @@ class MPCConfig:
             dy = self.goal[1] - y
             desired_yaw = np.arctan2(dy, dx)
 
-            yaw_error = np.arctan2(np.sin(desired_yaw - theta), np.cos(desired_yaw - theta))
-            total_cost += self.Q[1] * (yaw_error**2)
+            # yaw_error = np.arctan2(np.sin(desired_yaw - theta), np.cos(desired_yaw - theta))
+            # total_cost += self.Q[1] * (yaw_error**2)
             
             # UNCOMMENT TO ACCOUNT FOR YAW ERROR IN COST
             # if dist_to_goal > 0.02:
@@ -193,7 +193,7 @@ class MPCConfig:
 
         # remaining cost to go from final predicted state to goal
         remaining_cost = (self.T/self.norm_dist) * ((self.cost_to_go(temp_state))**2)
-        print(f"Stage cost : {total_cost:.4f} | Remaining cost: {remaining_cost:.4f}")
+        # print(f"Stage cost : {total_cost:.4f} | Remaining cost: {remaining_cost:.4f}")
 
         # total cost = stage + remaining
         total_cost += remaining_cost

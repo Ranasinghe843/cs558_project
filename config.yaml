@@ -62,13 +62,9 @@ nn_version: 9      # version of nn to choose
 
 # MPC
 case: 2
-# start: [-1.2, -0.1] # fail
-# start: [-0.65, 0.1] # funky but works
-start: [1.95, 1.95] # works :)
-# start: [0.4, -1.7]  # fail
-# start: [1.3, -1.7]  # little funky but works
-# start: [0.5, -0.8]  # little funky but works now
-# start: [-0.3, -1.4] # fail
+start: [-1.7, -0.1]   # 1
+# start: [1.95, 1.95] # 2 
+# start: [-0.3, 1.0]  # 3
 goal: [-1.2, -1.3]
 horizon_length: 12
 terminal_cost_type: "nn"  # "nn" or "heuristic"
