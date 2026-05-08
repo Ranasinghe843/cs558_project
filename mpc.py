@@ -131,7 +131,7 @@ class MPCConfig:
         total_cost = 0
         temp_state = self.state
 
-        HARD_MARGIN = 0.15 # self.robot_radius + 0.05
+        HARD_MARGIN = 0.15
         
         # total stage over predicted horizon
         for i in range(self.horizon_length):

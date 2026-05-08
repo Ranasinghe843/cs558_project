@@ -40,17 +40,27 @@ def test(config):
 
     num_samples = config['num_samples']
     data_version = config['version']
-    data_path = f"{config['data_folder']}/cost2go_{num_samples}_{data_version}.csv"
+    world = config['world']
+    data_path = f"{config['data_folder']}/{world}_cost2go_{num_samples}_{data_version}.csv"
     epochs = config['epochs']
-
+    optimizer_choice = config['optimizer']
+    dr = config['dropout_rate']
+    
     print(f"Loading data from: {data_path}")
     data = np.loadtxt(data_path, delimiter=',', skiprows=1)
     np.random.shuffle(data)
     
     totest = data[0:1000] if len(data) > 1000 else data
 
-    model = NeuralNetwork(obsv_dim=4, cost_dim=1)
-    weight_path = f"{config['nn_folder']}/nn_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth"
+    model = NeuralNetwork(obsv_dim=4, cost_dim=1, dr=dr)
+    if optimizer_choice == "AdamW":
+        if config['nn_version'] != 3:
+            weight_path = f"{config['nn_folder']}/{world}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+        else:
+            weight_path = f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+    else:
+        weight_path = f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epochs}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth"
+
     print("Loading model weights from:", weight_path)
     model.load_state_dict(torch.load(weight_path))
     
