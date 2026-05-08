@@ -153,8 +153,8 @@ class MPCConfig:
             dy = self.goal[1] - y
             desired_yaw = np.arctan2(dy, dx)
 
-            # yaw_error = np.arctan2(np.sin(desired_yaw - theta), np.cos(desired_yaw - theta))
-            # total_cost += self.Q[1] * (yaw_error**2)
+            yaw_error = np.arctan2(np.sin(desired_yaw - theta), np.cos(desired_yaw - theta))
+            total_cost += self.Q[1] * (yaw_error**2)
             
             # UNCOMMENT TO ACCOUNT FOR YAW ERROR IN COST
             # if dist_to_goal > 0.02:
@@ -228,7 +228,7 @@ def mpc(config):
 
     bounds = [(-0.22, 0.22), (-2.84, 2.84)] * H         # on robot commands (v, omega) 
     # setup env and visualization
-    env = SimulationEnv(render=True, start_pos_2d=config['start'], inflation_radius=0.0)
+    env = SimulationEnv(render=True, start_pos_2d=START[0:2], start_angle=START[2], inflation_radius=0.0)
     pt_start = [START[0], START[1], 0.05]
     pt_goal  = [GOAL[0], GOAL[1], 0.05]
     p.addUserDebugPoints([pt_start], pointColorsRGB=[[1, 0, 0]], pointSize=15.0)
@@ -256,7 +256,7 @@ def mpc(config):
         terminal_model=trained_model,
         terminal_cost_type=config['terminal_cost_type'],
         horizon_length=H,
-        start=np.array(config['start']),
+        start=START[0:2],
         goal=GOAL,
         Q=config['Q'],
         R=config['R'],
@@ -324,6 +324,13 @@ def mpc(config):
         np.savetxt(fname, store_state, delimiter=',', comments='')
 
     except KeyboardInterrupt:
+        # save robot trajectory to txt
+        if config['terminal_cost_type'] == "nn":
+            fname = f"{config['data_mpc_path']}/data_nn_case{case}.csv"
+        elif config['terminal_cost_type'] == "heuristic":
+            fname = f"{config['data_mpc_path']}/data_heuristic_case{case}.csv"
+
+        np.savetxt(fname, store_state, delimiter=',', comments='')
         p.disconnect()
 
 if __name__ == '__main__':

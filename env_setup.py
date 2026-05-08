@@ -7,7 +7,7 @@ import math
 CONFIG_FILE = "config.yaml"
 
 class SimulationEnv:
-    def __init__(self, render=True, start_pos_2d=[0, 0], inflation_radius=0.11):
+    def __init__(self, render=True, start_pos_2d=[0, 0], start_angle=180,inflation_radius=0.11):
         self.mode = p.GUI if render else p.DIRECT
         self.client = p.connect(self.mode)
         
@@ -19,7 +19,7 @@ class SimulationEnv:
         self.start_pos = [start_pos_2d[0], start_pos_2d[1], 0.01]
         self.robot_id = p.loadURDF("turtlebot3_burger.urdf",
                                    self.start_pos,
-                                   baseOrientation=p.getQuaternionFromEuler([0, 0, math.radians(180)]))
+                                   baseOrientation=p.getQuaternionFromEuler([0, 0, math.radians(start_angle)]))
 
         with open(CONFIG_FILE, 'r') as file:
             self.config = yaml.safe_load(file)
