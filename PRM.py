@@ -1,3 +1,7 @@
+######################################################################
+# Script for Generating a PRM* graph through a Pybullet environment
+######################################################################
+
 import math
 import random
 import pickle
@@ -6,9 +10,8 @@ import yaml
 import pybullet as p
 import numpy as np
 from env_setup import SimulationEnv
-
 class PRMStar:
-    def __init__(self, bounds, plane_id, robot_id, z_offset=0.15):
+    def __init__(self, bounds, plane_id, robot_id, z_offset=0.15, gamma=6.0):
         self.bounds = bounds  
         self.plane_id = plane_id
         self.robot_id = robot_id
@@ -17,19 +20,16 @@ class PRMStar:
         self.nodes = [] 
         self.adj = {}   
         self.debug_line_ids = []
-        self.gamma = 6.0 
+        self.gamma = gamma
 
-    def is_point_free(self, pos):
-        """Checks if a point is free by shooting a ray from the sky."""
+    def is_point_free(self, pos): # checks if the point is in an obstacle
         ray_start = [pos[0], pos[1], 2.0]
         ray_end = [pos[0], pos[1], 0.01]
         results = p.rayTest(ray_start, ray_end)
-        if not results: return True
-        hit_id = results[0][0]
-        return hit_id == -1 or hit_id in [self.plane_id, self.robot_id]
+        if not results or results[0][0] == -1: return True
+        return results[0][0] in [self.plane_id, self.robot_id]
 
-    def check_collision(self, start_pos, end_pos):
-        """Checks if the line between two nodes is clear at test_z height."""
+    def check_collision(self, start_pos, end_pos): # checks if the path between 2 points are obstacle free
         test_z = 0.05 
         ray_start = [start_pos[0], start_pos[1], test_z]
         ray_end = [end_pos[0], end_pos[1], test_z]
@@ -37,14 +37,14 @@ class PRMStar:
         if not results or results[0][0] == -1: return True
         return results[0][0] in [self.plane_id, self.robot_id]
 
-    def sample_node(self):
+    def sample_node(self): # samples a node within the given bounds
         while True:
             x = random.uniform(self.bounds[0], self.bounds[1])
             y = random.uniform(self.bounds[2], self.bounds[3])
             if self.is_point_free([x, y]):
                 return [x, y]
 
-    def grow(self, num_new_nodes):
+    def grow(self, num_new_nodes): # grows the graph bt the given number of nodes and connects using PRM* formula
         start_idx = len(self.nodes)
         for _ in range(num_new_nodes):
             self.nodes.append(self.sample_node())
@@ -62,23 +62,19 @@ class PRMStar:
                         if i not in self.adj[j]: self.adj[j].append(i)
 
     def visualize(self):
-        """Draws debug lines in the GUI. These are fast but might not show in getCameraImage."""
-        # Clear old lines
         for line_id in self.debug_line_ids:
             p.removeUserDebugItem(line_id)
         self.debug_line_ids = []
 
-        # Draw current roadmap
         for i, neighbors in self.adj.items():
             start = [self.nodes[i][0], self.nodes[i][1], self.z_offset]
             for n_idx in neighbors:
                 if n_idx > i:
                     end = [self.nodes[n_idx][0], self.nodes[n_idx][1], self.z_offset]
-                    # Bright green lines
                     line_id = p.addUserDebugLine(start, end, [0, 1, 0], lineWidth=0.05)
                     self.debug_line_ids.append(line_id)
         
-        print(f"Roadmap: {len(self.nodes)} nodes, {len(self.debug_line_ids)} edges visualized.")
+        print(f"{len(self.nodes)} nodes, {len(self.debug_line_ids)} edges.")
 
 def main():
     with open("config.yaml", 'r') as file:
@@ -86,8 +82,6 @@ def main():
 
     env = SimulationEnv(render=True)
     
-    # Force GUI Camera to Top-Down
-    # cameraDistance: how far back, pitch: -90 is straight down
     p.resetDebugVisualizerCamera(cameraDistance=5.0, cameraYaw=0, cameraPitch=-89.9, cameraTargetPosition=[0, 0, 0])
 
     prm = PRMStar(
@@ -96,14 +90,13 @@ def main():
         robot_id=env.robot_id
     )
 
-    print("--- PRM* Incremental Builder ---")
     node_increment = 100
     folder = config['prm_folder']
 
     try:
         while len(prm.nodes) < config['nodes']:
             current_n = len(prm.nodes)
-            print(f"\nGenerating nodes {current_n} to {current_n + node_increment}...")
+            print(f"\nGenerating {current_n + node_increment} nodes")
             
             prm.grow(node_increment)
             prm.visualize()
@@ -112,8 +105,8 @@ def main():
             with open(f"{folder}/{config['world']}/prm_{total}.pkl", "wb") as f:
                 pickle.dump({"nodes": prm.nodes, "adj": prm.adj}, f)
             
-            print(f"Iteration complete. Graph has {total} nodes.")
-            input(">>> Press Enter to add 100 more nodes (or Ctrl+C to exit)...")
+            print(f"{total} nodes.")
+            input(">>> 100 more nodes.")
                 
     except KeyboardInterrupt:
         pass
