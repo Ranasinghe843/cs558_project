@@ -61,18 +61,18 @@ weight_decay: 100  # only used for AdamW optimizer
 nn_version: 9      # version of nn to choose
 
 # MPC
-horizon_length: 12
-terminal_cost_type: "nn"  # "nn" or "heuristic"
 case: 2
 # start: [-1.2, -0.1] # fail
 # start: [-0.65, 0.1] # funky but works
-# start: [1.95, 1.95] # fail
+start: [1.95, 1.95] # works :)
 # start: [0.4, -1.7]  # fail
-# start: [1.3, -1.7]  # funky but works
-start: [0.5, -0.8]  # fail
+# start: [1.3, -1.7]  # little funky but works
+# start: [0.5, -0.8]  # little funky but works now
 # start: [-0.3, -1.4] # fail
 goal: [-1.2, -1.3]
-Q: [1.0, 0.0]     # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
+horizon_length: 12
+terminal_cost_type: "nn"  # "nn" or "heuristic"
+Q: [0.5, 0.01]     # weight for [dx, dy], dtheta (useing the same Q for dx and dy)
 R: [0.01, 0.01]   # weight for v, omega  
-W: 20.0           # weight for obstacle cost
-T: 10.0           # weight for terminal cost
+W: 50.0           # weight for obstacle cost
+T: 30.0           # weight for terminal cost

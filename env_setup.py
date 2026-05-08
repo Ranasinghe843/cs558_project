@@ -2,6 +2,7 @@ import pybullet as p
 import pybullet_data
 import yaml
 import time
+import math
 
 CONFIG_FILE = "config.yaml"
 
@@ -16,7 +17,9 @@ class SimulationEnv:
         self.plane_id = p.loadURDF("plane.urdf")
         
         self.start_pos = [start_pos_2d[0], start_pos_2d[1], 0.01]
-        self.robot_id = p.loadURDF("turtlebot3_burger.urdf", self.start_pos)
+        self.robot_id = p.loadURDF("turtlebot3_burger.urdf",
+                                   self.start_pos,
+                                   baseOrientation=p.getQuaternionFromEuler([0, 0, math.radians(180)]))
 
         with open(CONFIG_FILE, 'r') as file:
             self.config = yaml.safe_load(file)

@@ -131,7 +131,7 @@ class MPCConfig:
         total_cost = 0
         temp_state = self.state
 
-        HARD_MARGIN = self.robot_radius + 0.08
+        HARD_MARGIN = self.robot_radius + 0.05
         
         # total stage over predicted horizon
         for i in range(self.horizon_length):
@@ -147,6 +147,14 @@ class MPCConfig:
             # control cost
             control_cost = (self.R[0] * v**2) + (self.R[1] * omega**2)
             total_cost += control_cost
+
+            # yaw error cost
+            dx = self.goal[0] - x
+            dy = self.goal[1] - y
+            desired_yaw = np.arctan2(dy, dx)
+
+            yaw_error = np.arctan2(np.sin(desired_yaw - theta), np.cos(desired_yaw - theta))
+            total_cost += self.Q[1] * (yaw_error**2)
             
             # UNCOMMENT TO ACCOUNT FOR YAW ERROR IN COST
             # if dist_to_goal > 0.02:
@@ -160,15 +168,25 @@ class MPCConfig:
             #     total_cost += self.Q[1] * yaw_error**2 
 
             # obstacle cost
+            # Inside objective_function
             delta = np.abs(temp_state[:2] - self.obs_positions) - self.obs_half_extents
-            dist_to_edges = np.linalg.norm(np.maximum(delta, 0), axis=1)
-            
-            clearance = dist_to_edges - self.robot_radius
+
+            # 1. Distance if outside (standard)
+            outside_dist = np.linalg.norm(np.maximum(delta, 0), axis=1)
+
+            # 2. Distance if inside (negative value representing depth)
+            # This finds the closest edge when you are inside
+            inside_dist = np.minimum(np.max(delta, axis=1), 0)
+
+            # 3. Combine to get a "Signed" Distance
+            signed_dist = outside_dist + inside_dist
+
+            clearance = signed_dist - self.robot_radius
             violation = np.maximum(0, HARD_MARGIN - clearance)
             
             if violation.size > 0:
                 max_violation = np.max(violation)
-                obs_cost = self.W * (max_violation**2)
+                obs_cost = self.W * (max_violation**2) * (1 - np.exp(-5 * dist_to_goal))
                 total_cost += obs_cost
             else:
                 obs_cost = 0
