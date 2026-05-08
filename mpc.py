@@ -247,7 +247,7 @@ def mpc(config):
     )
     
     u_guess = np.zeros(H * 2)   # Initial guess for optimization
-    # u_guess[0::2] = 0.01
+    u_guess[0::2] = 0.001
     store_state = []            # to store the robot's trajectory 
 
     print("MPC Started. Heading to:", GOAL)
