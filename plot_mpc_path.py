@@ -1,3 +1,7 @@
+##########################################################
+# Script to plot NN-MPC and Heuristic-MPC paths for same start-goal.
+##########################################################
+
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -5,22 +9,26 @@ import yaml
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
-data_nn = np.loadtxt("data/mpc_path/data_nn_1.csv", delimiter=',')
-# data_heuristic = np.loadtxt('my_data.txt', delimiter=',')
+# load robot trajectories from MPC runs
+case = config['case']
+fname_nn = f"{config['data_mpc_path']}/data_nn_case{case}.csv"
+data_nn = np.loadtxt(fname_nn, delimiter=',')
+# fname_heuristic = f"{config['data_mpc_path']}/data_heuristic_case{case}.csv"
+# data_heuristic = np.loadtxt(fname_heuristic, delimiter=',')
 
+# load obstacle info from config
 obs_list = config[config['world']]['obstacles']
 obs_positions = np.array(obs_list)[:, :2]
 obs_half_extents = np.array(obs_list)[:, 2:]
 
+# figure setup
 resolution = 0.1
 x_range = np.arange(-5, 5, resolution)
 y_range = np.arange(-5, 5, resolution)
 X, Y = np.meshgrid(x_range, y_range)
 Z = np.zeros_like(X)
 
-# 2. Plot the Landscape
 plt.figure(figsize=(5, 5))
-# 4. Plot Goal and Obstacles
 plt.plot(data_nn[:, 0], data_nn[:, 1], 'b-', linewidth=4, label='NN-MPC')
 # Draw Obstacle Boxes
 for pos, ext in zip(obs_positions, obs_half_extents):

@@ -1,16 +1,19 @@
+#####################################################################
+# Script to train a feedforward neural network to predict cost-to-go values for a given world and dataset.
+#####################################################################
+
 from shlex import split
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import numpy as np
-import pickle
-import argparse
 from nn import NeuralNetwork
 import yaml
 import matplotlib.pyplot as plt
-    
+
+# Training function
 def train(config):
 
+    # load config parameters
     world = config['world']
     num_samples = config['num_samples']
     data_version = config['version']
@@ -22,8 +25,9 @@ def train(config):
     weight_decay = 1/config['weight_decay']
     raw_data = np.loadtxt(data_path, delimiter=',', skiprows=1)
     print(f"Loaded data from {data_path}, shape: {raw_data.shape}")
-    np.random.shuffle(raw_data)
+    np.random.shuffle(raw_data)     # randomize data
 
+    # reserve last 10k samples for testing, use the rest for training
     inputs_raw = raw_data[:-10000, 0:4]
     outputs_raw = raw_data[:-10000, 4:5]
     print(f"Training data: inputs shape {inputs_raw.shape}, outputs shape {outputs_raw.shape}")
@@ -34,10 +38,10 @@ def train(config):
     dataset = torch.utils.data.TensorDataset(states, costs)
     loader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
     
+    # initialize model
     model = NeuralNetwork(4, 1, dr=dr)
     
-    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True)
-    # optimizer = optim.Adam(model.parameters(), lr=lr)
+    # initialize optimizer and loss function
     if optimizer_choice == "AdamW":
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, fused=True)
     elif optimizer_choice == "Adam":
@@ -46,6 +50,7 @@ def train(config):
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True)
     criterion = nn.MSELoss()
 
+    # store average loss for plotting
     avg_loss_list = []
 
     for epoch in range(epochs):
@@ -68,16 +73,18 @@ def train(config):
     # torch.save(model.state_dict(), f"{config['nn_folder']}/nn_{round(dr*10)}_{optimizer_choice}_{epochs}_{config['learning_rate']}_{num_samples}_{data_version}.pth")
     # torch.save(model.state_dict(), f"{config['nn_folder']}/data_PRMstar/nn_{epochs}_{config['learning_rate']}.pth")
         
-            if optimizer_choice == "AdamW":
-                if config['nn_version'] != 3:
-                    torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-                else:
-                    torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-            elif optimizer_choice == "Adam":
-                torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
-            elif optimizer_choice == "SGD":
-                torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            # Save the model every 50 epochs
+            # if optimizer_choice == "AdamW":
+            #     if config['nn_version'] != 3:
+            #         torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn{config['nn_version']}_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            #     else:
+            #         torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}{config['weight_decay']}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            # elif optimizer_choice == "Adam":
+            #     torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
+            # elif optimizer_choice == "SGD":
+            #     torch.save(model.state_dict(), f"{config['nn_folder']}/{world}/nn_dr{round(dr*10)}_{optimizer_choice}_epochs{epoch}_lr{config['learning_rate']}_dataset{num_samples}_{data_version}.pth")
 
+    # plot average loss over epochs
     plt.figure()
     plt.plot(np.arange(0, epochs, 50), avg_loss_list)
     plt.xlabel('Epoch')

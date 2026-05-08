@@ -1,7 +1,6 @@
 cffi==2.0.0
 clarabel==0.11.1
 cvxpy==1.8.1
-# ghalton==0.6.2
 highspy==1.13.1
 ImageIO==2.37.2
 Jinja2==3.1.6

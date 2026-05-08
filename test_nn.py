@@ -1,14 +1,15 @@
+##################################################################
+# Script to test NN on testing dataset
+#################################################################
+
 import torch
-import torch.nn as nn
-import argparse
 import numpy as np
-import pickle
 from nn import NeuralNetwork
 import yaml
-from shlex import split
 
 def test(config):
 
+    # load config parameters
     num_samples = config['num_samples']
     data_version = config['version']
     world = config['world']
@@ -17,12 +18,11 @@ def test(config):
     optimizer_choice = config['optimizer']
     dr = config['dropout_rate']
 
+    # load dataset
     data = np.loadtxt(data_path, delimiter=',', skiprows=1)
-    training_data = data[:-10000, :]
-    testing_data = data[-10000:, :]
-    np.random.shuffle(testing_data)
-    totest = testing_data
+    totest = data[-10000:, :]
 
+    # load model
     model = NeuralNetwork(obsv_dim=4, cost_dim=1, dr=dr)
     if optimizer_choice == "AdamW":
         if config['nn_version'] != 3:
@@ -34,14 +34,13 @@ def test(config):
 
     print("Loading model weights from:", weight_path)
     model.load_state_dict(torch.load(weight_path))
-
     model.eval()
 
-    print("-" * 50)
     avg_error = 0.0
     error_store = []
     error_abs = 0.0
 
+    # compare predictions with actual values
     for raw_test in totest:
         raw_input = torch.tensor((raw_test[0:4])).float()
 
@@ -56,6 +55,7 @@ def test(config):
         # print(f" Error: {error:.4f}")
         avg_error += error
 
+    # print error
     avg_error /= len(totest)
     print(f"Average Error: {avg_error:.4f} % over {len(totest)} samples")
     print(f"Max Error : {np.max(error_store):.4f} % over {len(totest)} samples")
