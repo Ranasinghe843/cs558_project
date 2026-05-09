@@ -58,3 +58,6 @@ To reproduce path plots,
 
 `python plot_mpc_path.py`
 
+## Simulation Video
+
+The video shows the heuristic based MPC run and the NN-MPC run one after another for all 3 cases
