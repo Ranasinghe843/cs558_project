@@ -8,12 +8,11 @@ import numpy as np
 import random
 from env_setup import SimulationEnv
 
-class PRMOptimalityEvaluator:
+class PRMEvaluator:
     def __init__(self, config_path):
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
-        # Use DIRECT mode for speed
         self.env = SimulationEnv(render=False)
         self.bounds = self.env.bounds
         self.inflation = self.env.inflation_radius
@@ -169,5 +168,5 @@ class PRMOptimalityEvaluator:
         self.env.disconnect()
 
 if __name__ == "__main__":
-    evaluator = PRMOptimalityEvaluator("config.yaml")
+    evaluator = PRMEvaluator("config.yaml")
     evaluator.evaluate(num_queries=1000)

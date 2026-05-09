@@ -8,8 +8,6 @@ import csv
 import heapq
 from env_setup import SimulationEnv
 
-# --- CORE ALGORITHMS ---
-
 def a_star_search(start_idx, goal_idx, nodes, adj):
     open_set = []
     heapq.heappush(open_set, (0, start_idx))
@@ -38,7 +36,6 @@ def a_star_search(start_idx, goal_idx, nodes, adj):
     return None, float('inf')
 
 def smooth_path(path, plane_id, robot_id):
-    """Greedily shortens the path by checking direct line-of-sight between nodes."""
     if len(path) <= 2: return path
     
     smoothed = [path[0]]
@@ -47,51 +44,39 @@ def smooth_path(path, plane_id, robot_id):
     while curr < len(path) - 1:
         found_shortcut = False
         
-        # Try to connect to the furthest possible node in the path
-        # We look from the end of the path backwards to 'curr + 1'
         for next_idx in range(len(path) - 1, curr, -1):
             res = p.rayTest([smoothed[-1][0], smoothed[-1][1], 0.05], 
                             [path[next_idx][0], path[next_idx][1], 0.05])
             
-            # If no hit or it hits an allowed object
             if not res or res[0][0] in [-1, plane_id, robot_id]:
                 smoothed.append(path[next_idx])
                 curr = next_idx
                 found_shortcut = True
                 break
         
-        # FAIL-SAFE: If no shortcut was found (even to the next node), 
-        # we MUST move to the next sequential node to avoid an infinite loop.
         if not found_shortcut:
             curr += 1
             smoothed.append(path[curr])
             
     return smoothed
-
-# --- DATASET GENERATION LOGIC ---
-
 class DatasetGenerator:
     def __init__(self, config_path, prm_path):
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
-        # Initialize Env (Direct mode for speed)
         self.env = SimulationEnv(render=False)
         
-        # Load Roadmap
         with open(prm_path, 'rb') as f:
             data = pickle.load(f)
             self.nodes = data['nodes']
             self.adj = data['adj']
 
     def is_obstructed(self, start, goal):
-        """The Visibility Filter: Returns True if a straight line hits an obstacle."""
         res = p.rayTest([start[0], start[1], 0.05], [goal[0], goal[1], 0.05])
         if not res: return False
         return res[0][0] not in [-1, self.env.plane_id, self.env.robot_id]
 
     def get_nearest_valid_node(self, point):
-        """Finds the closest roadmap node with a clear line of sight."""
         dists = sorted(enumerate(self.nodes), key=lambda x: math.dist(point, x[1]))
         for idx, node_pos in dists[:15]: # Check 15 nearest
             res = p.rayTest([point[0], point[1], 0.05], [node_pos[0], node_pos[1], 0.05])
@@ -103,30 +88,25 @@ class DatasetGenerator:
         output_file=f"cost_to_go_{self.config['world']}.csv"
         dataset = []
         obstructed_count = 0
-        target_obstructed_ratio = 0.7  # 70% of data should be obstructed paths
+        target_obstructed_ratio = 0.7
 
         print(f"Generating {num_samples} samples...")
         
         while len(dataset) < num_samples:
-            # 1. Sample random points
             s_ptr = [random.uniform(-2, 2), random.uniform(-2, 2)]
             g_ptr = [random.uniform(-2, 2), random.uniform(-2, 2)]
             
-            # Ensure points aren't inside obstacles
             res_s = p.rayTest([s_ptr[0], s_ptr[1], 2.0], [s_ptr[0], s_ptr[1], 0.01])
             res_g = p.rayTest([g_ptr[0], g_ptr[1], 2.0], [g_ptr[0], g_ptr[1], 0.01])
             if (res_s and res_s[0][0] not in [-1, self.env.plane_id, self.env.robot_id]) or \
                (res_g and res_g[0][0] not in [-1, self.env.plane_id, self.env.robot_id]):
                 continue
 
-            # 2. Apply Visibility Filter
             obstructed = self.is_obstructed(s_ptr, g_ptr)
             
-            # Balancing logic: if it's 'easy' but we have enough easy ones, skip.
             if not obstructed and (len(dataset) - obstructed_count) > (num_samples * (1 - target_obstructed_ratio)):
                 continue
 
-            # 3. Connect to Roadmap and Solve
             s_idx = self.get_nearest_valid_node(s_ptr)
             g_idx = self.get_nearest_valid_node(g_ptr)
 
@@ -134,11 +114,9 @@ class DatasetGenerator:
                 path_pts, _ = a_star_search(s_idx, g_idx, self.nodes, self.adj)
                 
                 if path_pts:
-                    # Smoothing
                     full_path = [s_ptr] + path_pts + [g_ptr]
                     final_path = smooth_path(full_path, self.env.plane_id, self.env.robot_id)
                     
-                    # Calculate Ground Truth Cost
                     cost = sum(math.dist(final_path[i], final_path[i+1]) for i in range(len(final_path)-1))
                     
                     dataset.append([s_ptr[0], s_ptr[1], g_ptr[0], g_ptr[1], cost])
@@ -147,7 +125,6 @@ class DatasetGenerator:
                     if len(dataset) % 100 == 0:
                         print(f"Collected {len(dataset)} samples ({obstructed_count} obstructed)")
 
-        # 4. Save to CSV
         with open(output_file, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(["start_x","start_y","goal_x","goal_y","path_length"])
@@ -157,6 +134,5 @@ class DatasetGenerator:
         self.env.disconnect()
 
 if __name__ == "__main__":
-    # Update these paths to match your files
     gen = DatasetGenerator(config_path="config.yaml", prm_path="prm/world2/prm_1528.pkl")
     gen.run(num_samples=100000)
