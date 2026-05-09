@@ -60,11 +60,12 @@ def smooth_path(path, plane_id, robot_id):
             
     return smoothed
 class DatasetGenerator:
-    def __init__(self, config_path, prm_path):
+    def __init__(self, config_path):
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
         self.env = SimulationEnv(render=False)
+        prm_path = f"{self.config['prm_folder']}/{self.config['selected_prm']}"
         
         with open(prm_path, 'rb') as f:
             data = pickle.load(f)
@@ -134,5 +135,5 @@ class DatasetGenerator:
         self.env.disconnect()
 
 if __name__ == "__main__":
-    gen = DatasetGenerator(config_path="config.yaml", prm_path="prm/world2/prm_1528.pkl")
+    gen = DatasetGenerator(config_path="config.yaml")
     gen.run(num_samples=100000)

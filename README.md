@@ -15,13 +15,21 @@ and install the required packages,
 `pip install -r requirements.txt`
 
 ## Generating expert dataset
-For generating dataset, run,
+For generating PRM Graphs, run,
 
-`python gen_dataset.py`
+`python prm.py`
 
-For visualizing a example RRT* run,
+For visualizing a produced graph,
 
-`python visualize_rrt.py`
+`python prm.py --load path/to/prm/file`
+
+For evaluating all prm graphs in a folder, set PRM folder in `config.yaml` and run
+
+`python evaluate_prm.py`
+
+To generate dataset, set target prm graph in `config.yaml` and run
+
+`python dataset_gen.py`
 
 ## Neural network
 

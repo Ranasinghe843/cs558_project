@@ -5,7 +5,7 @@
 # folders and paths
 data_folder: "data/data_PRMstar"
 nn_folder: "models/data_PRMstar"
-prm_folder: "prm/trial"
+prm_folder: "prm/world2"
 world: "world2"
 data_mpc_path: "data/mpc_path"
 
@@ -49,6 +49,7 @@ world2:
 nodes: 2000
 num_samples: 100000
 version: 1
+selected_prm: "prm_1528.pkl"
 
 # Neural Network 
 # (BEST average abs error: nn_dr0_AdamW100_epochs100_lr1000_dataset100000_1.pth (nn_version 3))
